@@ -193,7 +193,18 @@ main>section+section,main>.secao+.secao{margin-top:22px}
 .lista .tab-box{padding:0}
 .duas-tabelas td{padding:4px 8px;font-size:13.5px}
 .duas-tabelas th{padding:8px 8px}
-@media (max-width:1180px){.duas-tabelas{grid-template-columns:1fr}}
+/* empilhado (celular e telas estreitas): as duas metades têm de ler como uma tabela só — o segundo cabeçalho
+   sai, as colunas ganham largura fixa para alinhar e o fio grosso fica só no fim da segunda */
+@media (max-width:1180px){
+  .duas-tabelas{grid-template-columns:1fr}
+  .duas-tabelas table{table-layout:fixed}
+  .duas-tabelas th:first-child,.duas-tabelas td:first-child{width:52%}
+  .duas-tabelas th:nth-child(2),.duas-tabelas td:nth-child(2),
+  .duas-tabelas th:nth-child(3),.duas-tabelas td:nth-child(3){width:24%}
+  #tab-bacias-2 thead{display:none}
+  #tab-bacias-2{border-top:0}
+  #tab-bacias tbody tr:last-child td{border-bottom:1px solid var(--linha)}
+}
 td.zero{color:var(--linha-forte)}
 .res-lista{list-style:none;margin:8px 0 0;padding:0;display:grid;grid-template-columns:repeat(auto-fill,minmax(132px,1fr));gap:4px 14px}
 .res-lista li{display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:center;gap:2px 8px;font:12.5px var(--narrow)}
