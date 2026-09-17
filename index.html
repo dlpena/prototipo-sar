@@ -57,7 +57,18 @@ main{padding-block:26px 60px}
 .indice{position:sticky;top:0;z-index:30;background:rgba(246,246,247,.96);backdrop-filter:blur(4px);border-bottom:1px solid var(--linha);margin:0 -24px 22px;padding:10px 24px;display:flex;gap:8px;flex-wrap:wrap;align-items:center}
 .indice a{padding:5px 12px;border-radius:14px;font-size:13.5px;color:var(--ana);background:#E4EBF3;text-decoration:none}
 .indice a:hover{background:var(--ana);color:#fff}
-.secao{border-left:5px solid var(--ana-claro);padding:18px 22px 20px;scroll-margin-top:64px}
+.secao{border-left:5px solid var(--ana-claro);padding:18px 22px 20px;scroll-margin-top:64px;position:relative}
+/* downloads: ação acessória, alinhada ao alto à direita da seção, com o peso de uma nota */
+.baixar{position:absolute;top:16px;right:20px;display:flex;align-items:center;gap:2px;z-index:2}
+.baixar button{all:unset;box-sizing:border-box;cursor:pointer;display:inline-flex;align-items:center;gap:5px;font:12.5px var(--sans);color:var(--apagado);padding:4px 8px;border-radius:3px}
+.baixar button:hover{color:var(--ana);background:var(--ana-gelo)}
+.baixar button:focus-visible{outline:2px solid var(--ana-medio);outline-offset:1px}
+.baixar svg{width:13px;height:13px;flex:none;opacity:.8}
+.baixar button:hover svg{opacity:1}
+@supports selector(:has(*)){.secao:has(.baixar)>h2,.secao:has(.baixar)>p.sub{padding-right:120px}}
+@media (max-width:640px){.baixar{position:static;justify-content:flex-end;margin:-6px 0 6px}
+  @supports selector(:has(*)){.secao:has(.baixar)>h2,.secao:has(.baixar)>p.sub{padding-right:0}}}
+
 .secao>h2{font-size:19px;margin:0 0 2px;color:var(--ana);font-weight:700}
 .secao>h2 small{font-size:13px;color:var(--apagado);font-weight:400;margin-right:8px}
 .secao>p.sub{margin:0 0 14px;color:var(--tinta-2);font-size:14px;max-width:110ch}
@@ -264,7 +275,6 @@ h1 .simb{margin-right:10px;vertical-align:-2px}
 #mapa-grande{height:560px;border:1px solid var(--linha);border-radius:4px;position:relative;z-index:0;isolation:isolate}
 .rot-usina span{font:700 12px/1 var(--narrow);color:#283377;white-space:nowrap;text-shadow:0 0 3px #fff,0 0 3px #fff,0 0 3px #fff}
 #mapa-grande.sat .rot-usina span{color:#fff;text-shadow:0 0 3px #000,0 0 4px #000,0 1px 2px #000}
-.botoes{display:flex;flex-wrap:wrap;gap:8px}
 .merge-opcoes{margin:2px 0 4px 22px;display:flex;gap:10px;font-size:12.5px;color:var(--tinta-2)}
 .merge-opcoes label{display:inline-flex;align-items:center;gap:4px;white-space:nowrap}
 .legenda-mapa{background:#fff;padding:8px 10px;border-radius:4px;font:12px var(--sans);line-height:1.6;box-shadow:0 1px 4px rgba(0,0,0,.2);max-width:240px}
@@ -544,6 +554,10 @@ const ORDEM_BACIAS = Object.keys(NOME).sort((a,b) => NOME[a].localeCompare(NOME[
 const POR_BACIA = b => RES.filter(r => r.bacia === b).sort((x,y) => x.ordem - y.ordem);
 const TIPO = {res:"Usina com reservatório", fio:"Usina a fio d'água", sem:"Sem cadastro ONS"};
 
+const ICO_BAIXAR = '<svg viewBox="0 0 16 16" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M8 2.2v7.3M4.8 6.6 8 9.8l3.2-3.2M3.2 13.4h9.6"/></svg>';
+// barra de download da seção: sempre no alto à direita, rótulo curto, peso visual de nota
+const barraBaixar = itens => `<div class="baixar">${itens.map(([id, r, t]) => `<button type="button" id="${id}" title="${t}">${ICO_BAIXAR}${r}</button>`).join("")}</div>`;
+
 function simbolo(tipo, tam=14, cor){
   const c = cor || (tipo==="fio" ? "#4A7FB0" : "#283377");
   if (tipo==="fio") return `<svg class="simb" width="${tam*.9}" height="${tam*.9}" viewBox="0 0 16 16" aria-hidden="true"><circle cx="8" cy="8" r="6.3" fill="${c}" stroke="#fff" stroke-width="1.6"/></svg>`;
@@ -759,7 +773,8 @@ function paginaSIN(){
     <section class="cartao secao" id="s-usinas" aria-labelledby="t-usinas">
       <h2 id="t-usinas"><small>5</small>Mapa das usinas</h2>
       <p class="sub">Cada usina acompanhada, com os dados de ${dBR(D.data)}. Passe o mouse ou clique num símbolo para ler o valor; use as camadas para escolher o mapa-base e os grupos.</p>
-      <div class="linha-mapa"><p class="resumo-filtros" id="resumo-filtros"></p><button type="button" class="acao sec" id="baixar-kmz">Exportar KMZ</button></div>
+      ${barraBaixar([["baixar-kmz", "KMZ", "Baixar as usinas visíveis em KMZ (Google Earth)"]])}
+      <p class="resumo-filtros" id="resumo-filtros"></p>
       <div id="mapa-situacao"></div>
       <p class="nota" style="margin:8px 0 0">${nRes - nComCoord} das ${nRes} usinas não têm coordenada no cadastro do ONS e não aparecem no mapa. Mapa-base e imagem de satélite vêm de serviços externos; onde a rede os bloqueia, ficam só as bacias.</p>
     </section>`;
@@ -928,13 +943,15 @@ function paginaGrande(){
     <section class="cartao secao" id="g-mapa" aria-labelledby="t-mapa-g">
       <h2 id="t-mapa-g"><small>1</small>Mapa da bacia</h2>
       <p class="sub">Passe o mouse sobre uma usina para ler os valores do dia; clique para abrir a ficha. No controle de camadas: mapa ou satélite, contorno, hidrografia, divisão estadual e a chuva do MERGE (INPE) nas últimas 24 h, 7 ou 30 dias.</p>
-      <div class="linha-mapa"><div class="legenda"><span>${simbolo("res",14)}Com reservatório</span><span>${simbolo("fio",14)}A fio d'água</span></div><button class="acao sec" type="button" id="baixar-kmz-bacia">Baixar KMZ da bacia</button></div>
+      ${barraBaixar([["baixar-kmz-bacia", "KMZ", "Baixar a bacia e as usinas em KMZ (Google Earth)"]])}
+      <div class="legenda" style="margin-bottom:6px"><span>${simbolo("res",14)}Com reservatório</span><span>${simbolo("fio",14)}A fio d'água</span></div>
       <div id="mapa-grande" style="position:relative"></div>
     </section>
     <section class="cartao secao tabela-bacia" id="g-tab" aria-labelledby="t-tab-g">
+      ${barraBaixar([["baixar-csv", "CSV", "Baixar a tabela do dia em CSV"], ["baixar-pdf", "PDF", "Baixar a tabela do dia em PDF"]])}
       <h2 id="t-tab-g"><small>2</small>Usinas em ${dBR(D.data)}</h2>
       <p class="sub">De montante para jusante. Clique numa usina para abrir a ficha. O minigráfico mostra os 30 dias até o dia escolhido, da variável selecionada, a mesma em todas as linhas.</p>
-      <div class="linha-mapa"><div class="ferramentas"><label>Dia <input type="date" id="dia-bacia" value="${D.data}" min="${G.res[0].serie[0].data}" max="${D.data}"></label><span class="nota" id="aviso-dia"></span></div><span class="botoes"><button class="acao sec" type="button" id="baixar-csv">Baixar CSV</button><button class="acao sec" type="button" id="baixar-pdf">Baixar PDF</button></span></div>
+      <div class="linha-mapa"><div class="ferramentas"><label>Dia <input type="date" id="dia-bacia" value="${D.data}" min="${G.res[0].serie[0].data}" max="${D.data}"></label><span class="nota" id="aviso-dia"></span></div></div>
       <div class="tab-box"><table>
         <thead><tr><th>Usina</th><th class="r">Afluente</th><th class="r">Defluente</th><th class="r">Turbinada</th><th class="r">Vertida</th><th class="r">Nível</th><th class="r">Volume útil</th>
             <th class="mini-th"><label>Últimos 30 dias <select id="var-mini" aria-label="Variável do minigráfico"><option value="afl">afluente</option><option value="defl">defluente</option><option value="turb">turbinada</option><option value="vert">vertida</option><option value="cota" selected>nível</option><option value="vu">volume útil</option></select></label></th></tr>
@@ -942,13 +959,13 @@ function paginaGrande(){
         <tbody id="tab-grande"></tbody></table></div>
     </section>
     <section class="cartao secao diagrama" id="g-diag" aria-labelledby="t-diag">
+      ${barraBaixar([["baixar-diag", "PNG", "Baixar o diagrama como imagem"]])}
       <h2 id="t-diag"><small>3</small>Diagrama da cascata</h2>
       <p class="sub">Da cabeceira (direita) à foz no rio Paraná (esquerda), como no mapa.</p>
       <div class="legenda" style="margin-bottom:4px">
         <span>${simbolo("res",14)}com reservatório: ponta voltada para montante, volume útil abaixo</span>
         <span>${simbolo("fio",14)}a fio d'água</span><span>número acima: defluente do dia (m³/s)</span>
       </div>
-      <div class="linha-mapa" style="justify-content:flex-end"><button class="acao sec" type="button" id="baixar-diag">Baixar imagem (PNG)</button></div>
       <div class="cx" id="diag-grande"></div>
     </section>`;
   $$(".indice a").forEach(a => a.onclick = e => { e.preventDefault(); document.getElementById(a.dataset.alvo).scrollIntoView({behavior:"smooth", block:"start"}); });
@@ -1207,6 +1224,7 @@ function paginaFicha(){
       </div>
     </section>
     <section class="cartao secao" id="f-graf" aria-labelledby="t-graf">
+      ${barraBaixar([["baixar-serie", "CSV", "Baixar a série do período em CSV"], ["baixar-graf-png", "PNG", "Baixar os dois gráficos como imagem"]])}
       <h2 id="t-graf"><small>2</small>Gráficos</h2>
       <p class="sub">Escolha a base, o período e as variáveis. Vazões no gráfico de cima; nível ou volume útil no de baixo, no mesmo eixo de tempo. Passe o mouse para ler os valores nos dois gráficos.</p>
       <div class="controles painel">
@@ -1218,22 +1236,22 @@ function paginaFicha(){
       <p class="nota aviso-afl" id="aviso-afl" hidden><b>Atenção:</b> na base horária a afluência é calculada por balanço hídrico (variação de volume mais defluência) e oscila, com valores negativos e picos que não são vazão real. Use a base diária para afluência.</p>
       <div class="graf" id="g-vazoes"></div>
       <div class="graf" id="g-segundo"></div>
-      <div class="linha-mapa" style="margin-top:10px"><p class="nota" id="resumo-graf" style="margin:0"></p><span class="botoes"><button class="acao sec" type="button" id="baixar-serie">Baixar série (CSV)</button><button class="acao sec" type="button" id="baixar-graf-png">Baixar imagem (PNG)</button></span></div>
+      <p class="nota" id="resumo-graf" style="margin:12px 0 0"></p>
     </section>
     <section class="cartao secao" id="f-dia" aria-labelledby="t-dia">
+      ${barraBaixar([["baixar-dia-png", "PNG", "Baixar o gráfico como imagem"]])}
       <h2 id="t-dia"><small>3</small>Mesmo dia em outros anos</h2>
       <p class="sub">O valor de um mesmo dia do calendário em cada ano da série diária. Escolha o dia e a variável.</p>
       <div class="controles"><fieldset><legend>Dia</legend><input type="date" id="dia-ref-f" value="${ult.data}" min="${DI[0].data}" max="${ult.data}"></fieldset>
         <fieldset><legend>Variável</legend><select id="var-dia">${["vu","cota","afl","defl"].map(k => `<option value="${k}">${VARS[k].r}</option>`).join("")}</select></fieldset></div>
-      <div class="linha-mapa" style="justify-content:flex-end;margin-top:-4px"><button class="acao sec" type="button" id="baixar-dia-png">Baixar imagem (PNG)</button></div>
       <div class="graf" id="g-dia"></div>
     </section>
     <section class="cartao secao" id="f-ano" aria-labelledby="t-ano">
+      ${barraBaixar([["baixar-ano-png", "PNG", "Baixar o gráfico como imagem"]])}
       <h2 id="t-ano"><small>4</small>Ano contra anos anteriores</h2>
       <p class="sub">A série diária de cada ano sobreposta no mesmo calendário. O ano corrente fica em destaque; clique nos anos para incluir ou tirar.</p>
       <div class="controles"><fieldset><legend>Variável</legend><select id="var-ano">${["vu","cota"].map(k => `<option value="${k}">${VARS[k].r}${k==="vu" ? " (%)" : " (m)"}</option>`).join("")}</select></fieldset>
         <fieldset class="anos"><legend>Anos</legend><span id="anos-chips"></span></fieldset></div>
-      <div class="linha-mapa" style="justify-content:flex-end;margin-top:-4px"><button class="acao sec" type="button" id="baixar-ano-png">Baixar imagem (PNG)</button></div>
       <div class="graf" id="g-ano"></div>
     </section>`;
   $$(".indice a").forEach(a => a.onclick = e => { e.preventDefault(); document.getElementById(a.dataset.alvo).scrollIntoView({behavior:"smooth", block:"start"}); });
