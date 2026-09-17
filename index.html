@@ -1306,8 +1306,8 @@ function paginaFicha(){
     <div class="cab-bacia">
       <div>
         <h1>${simbolo("res",22)}${caso(F.nome)}</h1>
-        <p class="lead">Usina com reservatório no rio ${F.rio}, bacia do Grande, Minas Gerais. Código SAR ${F.codigo}.</p>
-        <div class="carimbo"><span>Último dia fechado <b>${dBR(ult.data)}</b></span><span>Base diária desde <b>${dBR(DI[0].data)}</b></span><span>Base horária desde <b>${fHora(HO[0].t)}</b>, última <b>${fHora(HO[HO.length-1].t)}</b></span></div>
+        <p class="lead">Usina com reservatório no rio ${F.rio}, bacia do Grande, Minas Gerais.</p>
+        <div class="carimbo"><span>Código SAR <b>${F.codigo}</b></span><span>Último dia fechado <b>${dBR(ult.data)}</b></span><span>Base diária desde <b>${dBR(DI[0].data)}</b></span><span>Base horária desde <b>${fHora(HO[0].t)}</b>, última <b>${fHora(HO[HO.length-1].t)}</b></span></div>
       </div>
     </div>`;
   $("#conteudo").innerHTML = `
