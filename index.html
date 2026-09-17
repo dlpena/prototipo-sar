@@ -2122,6 +2122,7 @@ function paginaNE(){
           <tfoot id="pe-estados"></tfoot>
         </table></div>
       </div>
+      <p class="nota">Em Minas Gerais o módulo acompanha apenas os reservatórios situados no Semiárido, e não o estado inteiro: por isso a área de MG aparece no mapa com a observação. Nos nove estados do Nordeste o recorte é o estado todo.</p>
     </section>
     <section class="cartao secao" id="n-vol" aria-labelledby="t-n-vol">
       <h2 id="t-n-vol"><small>2</small>Volume acumulado do Nordeste</h2>
@@ -2289,6 +2290,12 @@ function mapaNE(host){
     const tx = svgEl("text",{x:u.rot[0], y:u.rot[1], "text-anchor":"middle", "font-size":13, "font-weight":700, "font-family":"Arial",
       fill:"#22262E", "paint-order":"stroke", stroke:"#fff", "stroke-width":3, "pointer-events":"none"});
     tx.textContent = u.uf; gRot.append(tx);
+    if (u.uf === "MG"){                    // em MG o módulo acompanha só o que está no semiárido
+      const obs = svgEl("text",{x:u.rot[0], y:u.rot[1]+15, "text-anchor":"middle", "font-size":10.5,
+        "font-family":"Arial", fill:"#4B5260", "paint-order":"stroke", stroke:"#fff", "stroke-width":3,
+        "pointer-events":"none"});
+      obs.textContent = "só o semiárido"; gRot.append(obs);
+    }
   });
   svg.append(gRot);
   host.innerHTML = ""; host.append(svg);
