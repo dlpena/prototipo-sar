@@ -1388,12 +1388,11 @@ function mapaFicha(host, F){
   const mapa = L.map(host, {scrollWheelZoom:false, zoomSnap:.25, zoomControl:false});
   const satelite = L.layerGroup([
     L.tileLayer("https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}", {attribution:"Esri World Imagery", maxZoom:18}),
-    L.tileLayer("https://server.arcgisonline.com/ArcGIS/rest/services/Reference/World_Boundaries_and_Places/MapServer/tile/{z}/{y}/{x}", {maxZoom:18})]).addTo(mapa);
-  const claro = L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png", {attribution:"© OpenStreetMap", maxZoom:18});
+    L.tileLayer("https://server.arcgisonline.com/ArcGIS/rest/services/Reference/World_Boundaries_and_Places/MapServer/tile/{z}/{y}/{x}", {maxZoom:18})]);
+  const claro = L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png", {attribution:"© OpenStreetMap", maxZoom:18}).addTo(mapa);
   const gb = D.geo.bacias.find(g => g.bacia==="GRANDE");
-  const bacia = L.geoJSON({type:"Feature", geometry:{type:"MultiPolygon", coordinates:gb.aneis.map(a => [a])}}, {style:{color:"#fff", weight:1.6, fill:false}, interactive:false}).addTo(mapa);
-  const rios = L.geoJSON({type:"Feature", geometry:{type:"MultiLineString", coordinates:D.geo.rios_grande}}, {style:{color:"#8FC4F2", weight:1.4, opacity:.95}, interactive:false}).addTo(mapa);
-  host.classList.add("sat");
+  const bacia = L.geoJSON({type:"Feature", geometry:{type:"MultiPolygon", coordinates:gb.aneis.map(a => [a])}}, {style:{color:"#283377", weight:1.6, fill:false}, interactive:false}).addTo(mapa);
+  const rios = L.geoJSON({type:"Feature", geometry:{type:"MultiLineString", coordinates:D.geo.rios_grande}}, {style:{color:"#5F8FC0", weight:1.4, opacity:.95}, interactive:false}).addTo(mapa);
   mapa.on("baselayerchange", e => { const sat = e.name==="Satélite"; bacia.setStyle({color: sat ? "#fff" : "#283377"}); rios.setStyle({color: sat ? "#8FC4F2" : "#5F8FC0"}); host.classList.toggle("sat", sat); });
   mapa.fitBounds(bacia.getBounds(), {padding:[6,6]});
   D.grande.res.forEach(r => {
@@ -1406,7 +1405,7 @@ function mapaFicha(host, F){
     if (!eu){ m.on("click", () => abrirFicha(r)); }
     L.marker([r.lat, r.lon], {icon: L.divIcon({className:"rot-usina" + (eu ? " eu" : ""), iconAnchor:[eu ? -14 : -8, 8], html:`<span>${esc(caso(r.nome))}</span>`}), interactive:false, zIndexOffset:-100}).addTo(mapa);
   });
-  L.control.layers({"Satélite": satelite, "Mapa": claro}, null, {collapsed:true}).addTo(mapa);
+  L.control.layers({"Mapa": claro, "Satélite": satelite}, null, {collapsed:true}).addTo(mapa);
   L.control.zoom({position:"bottomright"}).addTo(mapa);
 }
 
