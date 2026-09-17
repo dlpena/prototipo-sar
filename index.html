@@ -75,16 +75,22 @@ main{padding-block:26px 60px}
   body:not(.na-inicio) header.faixa{position:sticky;top:0;z-index:40}
   body.rolado:not(.na-inicio) header.faixa{box-shadow:0 4px 12px rgba(34,38,46,.07)}
   /* altura constante: se o cabeçalho encolhesse ao rolar, o documento saltaria 93 px e o scrollIntoView erraria */
-  body:not(.na-inicio) .topo{padding-block:0}
+  body:not(.na-inicio) .topo{padding-block:3px}
   body:not(.na-inicio) .marca{padding-bottom:0;gap:12px}
-  body:not(.na-inicio) .logo svg{height:30px}
+  body:not(.na-inicio) .logo svg{height:42px}   /* 54 px na inicial; o manual da ANA só exige redução proporcional, sem mínimo fixo */
   body:not(.na-inicio) .sistema{border-left:0;padding-left:0}
-  body:not(.na-inicio) .sistema b{font-size:17px}
+  body:not(.na-inicio) .sistema b{font-size:20px}
   body:not(.na-inicio) .sistema span,body:not(.na-inicio) .selo{display:none}
   body:not(.na-inicio) .modulos button{padding:9px 12px;font-size:13.5px}
   body:not(.na-inicio) .indice{top:var(--topo-h,44px)}
   body:not(.na-inicio) .secao{scroll-margin-top:calc(var(--topo-h,44px) + 62px)}
   body:not(.na-inicio) .leaflet-top{margin-top:0}
+}
+/* acima de 1240 px cabe o subtítulo ao lado do logotipo sem empurrar as abas para a segunda linha
+   (marca 141 px + subtítulo ~300 px + abas 661 px + respiro) */
+@media (min-width:1240px){
+  body:not(.na-inicio) .sistema{border-left:1px solid var(--linha-forte);padding-left:16px}
+  body:not(.na-inicio) .sistema span{display:block;font-size:12.5px;margin-top:1px}
 }
 @media (max-width:1023px){
   .indice .ctx{display:none}
