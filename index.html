@@ -1556,6 +1556,7 @@ function graficoMesmoDia(){
   dados.forEach((d,i) => {
     const x = X(i) + (X(1)-X(0)-bw)/2;
     if (d.v==null){ const tx = svgEl("text",{x:x+bw/2, y:Y(lo)-4, "text-anchor":"middle", "font-size":10, fill:"#A3A8B1"}); tx.textContent = "–"; svg.append(tx); return; }
+    const escura = d.a===anoAtual || d.a===anoAtual-1;
     const r = svgEl("rect",{x, y:Math.min(Y(d.v),Y(lo)), width:bw, height:Math.abs(Y(lo)-Y(d.v)), fill: d.a===anoAtual ? "#283377" : d.a===anoAtual-1 ? "#4A7FB0" : "#C9CED6", rx:1});
     r.addEventListener("pointerenter", () => { tip.innerHTML = `<b>${dBR(`${d.a}-${mmdd}`)}</b><div class="l"><span>${V.r}</span><span class="num">${fmt(d.v,V.dec)} ${V.u}</span></div>`; tip.hidden = false; const rr = svg.getBoundingClientRect(); tip.style.left = Math.min((x+bw/2)/W*rr.width + 10, rr.width - 160) + "px"; tip.style.top = "6px"; });
     r.addEventListener("pointerleave", () => tip.hidden = true);
@@ -1565,7 +1566,7 @@ function graficoMesmoDia(){
     const cy = dentro ? Y(d.v) + 6 : Y(d.v) - 6;
     // girado -90: "end" escreve para baixo (dentro da barra), "start" escreve para cima (acima da barra)
     const vt = svgEl("text",{x:cx, y:cy, "text-anchor": dentro ? "end" : "start", "dominant-baseline":"middle", "font-size":10,
-      "font-family":"Arial", fill: dentro ? "#fff" : "#44506A", transform:`rotate(-90 ${cx} ${cy})`});
+      "font-family":"Arial", fill: dentro ? (escura ? "#fff" : "#3C4453") : "#44506A", transform:`rotate(-90 ${cx} ${cy})`});
     vt.textContent = fmt(d.v, V.dec); svg.append(vt);
   });
   host.append(svg, tip);
