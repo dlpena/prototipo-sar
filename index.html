@@ -265,6 +265,8 @@ h1 .simb{margin-right:10px;vertical-align:-2px}
 .preset.ativo{background:var(--ana);border-color:var(--ana);color:#fff}
 .chip-ano{all:unset;cursor:pointer;padding:2px 8px;border-radius:10px;border:1px solid var(--linha);color:var(--apagado);font-size:12px;margin:2px 2px 2px 0}
 .chip-ano.on{background:var(--ana);border-color:var(--ana);color:#fff}
+.chip-ano:disabled{cursor:not-allowed;opacity:.45}
+.controles .anos legend .nota{font-weight:400;text-transform:none;letter-spacing:0}
 .graf{position:relative}
 .graf svg{display:block;width:100%;height:auto}
 .graf+.graf{margin-top:22px}
@@ -701,6 +703,24 @@ async function pdfTabelaBacia(lista, kMini, rotMini){
   toast("PDF gerado. (Na página publicada no claude.ai o download é bloqueado; abra o arquivo local.)");
 }
 
+// rótulos de ano nas pontas das linhas: deslocados quando colidem, com fio fino ligando o rótulo ao fim da linha
+function rotulosPonta(svg, fins, cor, destaque, baixo){
+  const passo = 14;
+  fins.sort((a, b) => a.y - b.y);
+  let ant = -Infinity;
+  fins.forEach(f => { f.ly = Math.max(f.y, ant + passo); ant = f.ly; });
+  const excesso = fins.length ? fins[fins.length-1].ly - baixo : 0;
+  if (excesso > 0) fins.forEach(f => f.ly -= excesso);
+  fins.forEach(f => {
+    if (Math.abs(f.ly - f.y) > 1.5)
+      svg.append(svgEl("path",{d:`M${(f.x+2).toFixed(1)} ${f.y.toFixed(1)} L${(f.x+8).toFixed(1)} ${f.ly.toFixed(1)}`, stroke:cor(f.a), "stroke-width":1, fill:"none", opacity:.9}));
+    if (f.a===destaque) svg.append(svgEl("circle",{cx:f.x, cy:f.y, r:5, fill:"#283377", stroke:"#fff", "stroke-width":2}));
+    const tx = svgEl("text",{x:f.x+11, y:f.ly+4, fill: f.a===destaque ? "#283377" : "#44506A", "font-size":12,
+      "font-weight": f.a===destaque ? 700 : 400, "font-family":"Arial"});
+    tx.textContent = f.a; svg.append(tx);
+  });
+}
+
 /* ============================================================ gráfico do equivalente */
 function graficoEquivalente(host){
   const S = D.equivalente.serie, ult = D.equivalente.ultimo_dia, anoAtual = +ult.slice(0,4);
@@ -731,13 +751,7 @@ function graficoEquivalente(host){
     if (fim!=null) fins.push({a, x:X(fim), y:Y(serie[a][fim])});
   });
   // rótulos diretos nas pontas, afastados verticalmente só quando colidem
-  fins.sort((p,q) => p.y - q.y);
-  for (let i=1;i<fins.length;i++) if (fins[i].x > W-m.r-5 && fins[i-1].x > W-m.r-5 && fins[i].y - fins[i-1].y < 13) fins[i].y = fins[i-1].y + 13;
-  fins.forEach(p => {
-    if (p.a===anoAtual){ svg.append(svgEl("circle",{cx:p.x,cy:p.y,r:5,fill:"#283377",stroke:"#fff","stroke-width":2})); }
-    const t = svgEl("text",{x:p.x+8,y:p.y+4,fill: p.a===anoAtual ? "#283377" : "#44506A","font-size":12,"font-weight": p.a===anoAtual ? 700 : 400,"font-family":"Arial"});
-    t.textContent = p.a; svg.append(t);
-  });
+  rotulosPonta(svg, fins, cor, anoAtual, H - m.b - 4);
   const cruz = svgEl("line",{y1:m.t,y2:H-m.b,stroke:"#C9CDD4",visibility:"hidden"}); svg.append(cruz);
   const alvo = svgEl("rect",{x:m.l,y:0,width:W-m.l-m.r,height:H,fill:"transparent"}); svg.append(alvo);
   host.innerHTML = ""; host.append(svg);
@@ -1269,6 +1283,7 @@ const VARS = {afl:{r:"Afluente", u:"m³/s", cor:"#283377", dec:0}, defl:{r:"Defl
               vert:{r:"Vertida", u:"m³/s", cor:"#C0392B", dec:0}, nat:{r:"Vazão natural", u:"m³/s", cor:"#7B8794", dec:0, tracejado:true},
               cota:{r:"Nível", u:"m", cor:"#17868F", dec:2}, vu:{r:"Volume útil", u:"%", cor:"#17868F", dec:1}};
 const MESES = ["jan","fev","mar","abr","mai","jun","jul","ago","set","out","nov","dez"];
+const MAX_ANOS = 10; // limite pedido pelo Diego em 17/09/2026; acima disso a leitura do gráfico se perde
 let fichaEstado = null;
 
 function serieDiaria(){ // objetos por dia, ordenados
@@ -1328,15 +1343,15 @@ function paginaFicha(){
       <h2 id="t-dia"><small>3</small>Mesmo dia em outros anos</h2>
       <p class="sub">O valor de um mesmo dia do calendário em cada ano da série diária. Escolha o dia e a variável.</p>
       <div class="controles"><fieldset><legend>Dia</legend><input type="date" id="dia-ref-f" value="${ult.data}" min="${DI[0].data}" max="${ult.data}"></fieldset>
-        <fieldset><legend>Variável</legend><select id="var-dia">${["vu","cota","afl","defl"].map(k => `<option value="${k}">${VARS[k].r}</option>`).join("")}</select></fieldset></div>
+        <fieldset><legend>Variável</legend><select id="var-dia">${["vu","cota"].map(k => `<option value="${k}">${VARS[k].r} (${VARS[k].u})</option>`).join("")}</select></fieldset></div>
       <div class="graf" id="g-dia"></div>
     </section>
     <section class="cartao secao" id="f-ano" aria-labelledby="t-ano">
       ${barraBaixar([["baixar-ano-png", "PNG", "Baixar o gráfico como imagem"]])}
       <h2 id="t-ano"><small>4</small>Ano contra anos anteriores</h2>
-      <p class="sub">A série diária de cada ano sobreposta no mesmo calendário. O ano corrente fica em destaque; clique nos anos para incluir ou tirar.</p>
+      <p class="sub">A série diária de cada ano sobreposta no mesmo calendário. O ano corrente fica em destaque; clique nos anos para incluir ou tirar, até ${MAX_ANOS} ao mesmo tempo.</p>
       <div class="controles"><fieldset><legend>Variável</legend><select id="var-ano">${["vu","cota"].map(k => `<option value="${k}">${VARS[k].r}${k==="vu" ? " (%)" : " (m)"}</option>`).join("")}</select></fieldset>
-        <fieldset class="anos"><legend>Anos</legend><span id="anos-chips"></span></fieldset></div>
+        <fieldset class="anos"><legend>Anos <span class="nota" id="nota-anos"></span></legend><span id="anos-chips"></span></fieldset></div>
       <div class="graf" id="g-ano"></div>
     </section>`;
   $$(".indice a").forEach(a => a.onclick = e => { e.preventDefault(); document.getElementById(a.dataset.alvo).scrollIntoView({behavior:"smooth", block:"start"}); });
@@ -1412,7 +1427,24 @@ function paginaFicha(){
   const anoAtual = +ult.data.slice(0,4);
   fichaEstado.anosSel = new Set([anoAtual, anoAtual-1, anoAtual-2, anoAtual-3, anoAtual-4]);
   $("#anos-chips").innerHTML = anos.map(a => `<button type="button" class="chip-ano${fichaEstado.anosSel.has(a) ? " on" : ""}" data-a="${a}">${a}</button>`).join("");
-  $$("#anos-chips .chip-ano").forEach(b => b.onclick = () => { const a = +b.dataset.a; fichaEstado.anosSel.has(a) ? fichaEstado.anosSel.delete(a) : fichaEstado.anosSel.add(a); b.classList.toggle("on"); graficoAnos(); });
+  // limite de anos: acima disso os rótulos das pontas se sobrepõem e o gráfico deixa de ser legível
+  const atualizarChips = () => {
+    const n = fichaEstado.anosSel.size, cheio = n >= MAX_ANOS;
+    $$("#anos-chips .chip-ano").forEach(b => { const on = fichaEstado.anosSel.has(+b.dataset.a); b.classList.toggle("on", on); b.disabled = !on && cheio; });
+    $("#nota-anos").textContent = `${n} de ${MAX_ANOS}`;
+  };
+  $$("#anos-chips .chip-ano").forEach(b => b.onclick = () => {
+    const a = +b.dataset.a;
+    if (fichaEstado.anosSel.has(a)){
+      if (fichaEstado.anosSel.size === 1){ toast("Deixe ao menos um ano selecionado."); return; }
+      fichaEstado.anosSel.delete(a);
+    } else {
+      if (fichaEstado.anosSel.size >= MAX_ANOS){ toast(`Até ${MAX_ANOS} anos ao mesmo tempo: desmarque um para incluir outro.`); return; }
+      fichaEstado.anosSel.add(a);
+    }
+    atualizarChips(); graficoAnos();
+  });
+  atualizarChips();
   $("#var-ano").onchange = graficoAnos;
   $("#baixar-ano-png").onclick = () => baixarPNG([$("#g-ano svg")], `sar_furnas_ano_contra_anos.png`, `Furnas · ${VARS[$("#var-ano").value].r} ao longo do ano`, LEG_ANOS(+fichaEstado.ult.data.slice(0,4)));
   graficoAnos();
@@ -1512,7 +1544,7 @@ function graficoMesmoDia(){
   host.innerHTML = "";
   const W = Math.max(520, host.clientWidth), H = 262, m = {l:62, r:16, t:36, b:26};
   const vals = dados.map(d => d.v).filter(v => v!=null); let lo = 0, hi = Math.max(...vals);
-  if (k==="cota"){ lo = Math.min(...vals); const p = (hi-lo)*.1||1; lo -= p; hi += p; } else if (k==="vu") hi = Math.max(100, hi); else hi *= 1.06;
+  if (k==="cota"){ lo = Math.min(...vals); const p = (hi-lo)*.12||1; lo -= p; hi += p; } else if (k==="vu") hi = Math.max(100, hi); else hi *= 1.06;
   const X = i => m.l + i*(W-m.l-m.r)/anos.length, bw = Math.min(28, (W-m.l-m.r)/anos.length*.7), Y = v => m.t + (hi-v)/(hi-lo)*(H-m.t-m.b);
   const svg = svgEl("svg",{viewBox:`0 0 ${W} ${H}`, role:"img", "aria-label":`${V.r} em ${dBR(ref).slice(0,5)} de cada ano`});
   const eixo = svgEl("g",{class:"eixo"}); const passoY = niceStep((hi-lo)/5);
@@ -1528,6 +1560,13 @@ function graficoMesmoDia(){
     r.addEventListener("pointerenter", () => { tip.innerHTML = `<b>${dBR(`${d.a}-${mmdd}`)}</b><div class="l"><span>${V.r}</span><span class="num">${fmt(d.v,V.dec)} ${V.u}</span></div>`; tip.hidden = false; const rr = svg.getBoundingClientRect(); tip.style.left = Math.min((x+bw/2)/W*rr.width + 10, rr.width - 160) + "px"; tip.style.top = "6px"; });
     r.addEventListener("pointerleave", () => tip.hidden = true);
     svg.append(r);
+    // valor de cada barra, na vertical: dentro quando a barra é alta, acima quando é curta
+    const hb = Math.abs(Y(lo)-Y(d.v)), cx = x + bw/2, dentro = hb > 52;
+    const cy = dentro ? Y(d.v) + 6 : Y(d.v) - 6;
+    // girado -90: "end" escreve para baixo (dentro da barra), "start" escreve para cima (acima da barra)
+    const vt = svgEl("text",{x:cx, y:cy, "text-anchor": dentro ? "end" : "start", "dominant-baseline":"middle", "font-size":10,
+      "font-family":"Arial", fill: dentro ? "#fff" : "#44506A", transform:`rotate(-90 ${cx} ${cy})`});
+    vt.textContent = fmt(d.v, V.dec); svg.append(vt);
   });
   host.append(svg, tip);
 }
@@ -1561,9 +1600,7 @@ function graficoAnos(){
     svg.append(svgEl("path",{d, fill:"none", stroke:cor(a), "stroke-width": a===anoAtual ? 3 : a===anoAtual-1 ? 2 : 1.3, "stroke-linejoin":"round"}));
     if (fim!=null) fins.push({a, x:X(fim), y:Y(serie[a][fim])});
   });
-  fins.sort((p,q) => p.y - q.y);
-  for (let i=1;i<fins.length;i++) if (fins[i].x > W-m.r-5 && fins[i-1].x > W-m.r-5 && fins[i].y - fins[i-1].y < 13) fins[i].y = fins[i-1].y + 13;
-  fins.forEach(f => { if (f.a===anoAtual) svg.append(svgEl("circle",{cx:f.x,cy:f.y,r:5,fill:"#283377",stroke:"#fff","stroke-width":2})); const tx = svgEl("text",{x:f.x+8,y:f.y+4,fill: f.a===anoAtual ? "#283377" : "#44506A","font-size":12,"font-weight": f.a===anoAtual ? 700 : 400,"font-family":"Arial"}); tx.textContent = f.a; svg.append(tx); });
+  rotulosPonta(svg, fins, cor, anoAtual, H - m.b - 4);
   const cruz = svgEl("line",{y1:m.t,y2:H-m.b,stroke:"#C9CDD4",visibility:"hidden"}); svg.append(cruz);
   const alvo = svgEl("rect",{x:m.l,y:0,width:W-m.l-m.r,height:H,fill:"transparent"}); svg.append(alvo);
   host.append(svg);
