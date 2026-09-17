@@ -587,37 +587,117 @@ function imagemDeSVG(svg){
   const url = "data:image/svg+xml;charset=utf-8," + encodeURIComponent(new XMLSerializer().serializeToString(c));
   return new Promise((ok, erro) => { const im = new Image(); im.onload = () => ok(im); im.onerror = () => erro(new Error("svg")); im.src = url; });
 }
-async function baixarPNG(svgs, nome, titulo){
+// legenda do PNG: a da tela é HTML e não entra no SVG, então é redesenhada aqui
+// item: {r rótulo, cor, tracejado, simbolo "res"|"fio", area true}
+const LARG_SIMB = it => it.simbolo ? 20 : it.area ? 22 : it.cor ? 24 : 0;
+function disporLegenda(ctx, itens, x0, xMax){
+  ctx.font = "12.5px Arial";
+  const linhas = [[]]; let x = x0;
+  itens.forEach(it => {
+    const sw = LARG_SIMB(it), w = sw + ctx.measureText(it.r).width + 20;
+    if (x > x0 && x + w > xMax){ linhas.push([]); x = x0; }
+    linhas[linhas.length-1].push({it, x, sw}); x += w;
+  });
+  return linhas;
+}
+function legendaPNG(ctx, linhas, y0){
+  ctx.font = "12.5px Arial"; ctx.textBaseline = "middle";
+  linhas.forEach((linha, i) => {
+    const y = y0 + i*18;
+    linha.forEach(({it, x, sw}) => {
+      if (it.simbolo==="res"){ ctx.fillStyle = it.cor || "#283377"; ctx.beginPath(); ctx.moveTo(x+7, y-6); ctx.lineTo(x+14, y+5); ctx.lineTo(x, y+5); ctx.closePath(); ctx.fill(); }
+      else if (it.simbolo==="fio"){ ctx.fillStyle = it.cor || "#4A7FB0"; ctx.beginPath(); ctx.arc(x+7, y, 5.6, 0, 6.2832); ctx.fill(); }
+      else if (it.area){ ctx.fillStyle = it.cor; ctx.fillRect(x, y-5, 16, 10); ctx.strokeStyle = "#fff"; ctx.lineWidth = 1; ctx.strokeRect(x, y-5, 16, 10); }
+      else if (it.cor){ ctx.strokeStyle = it.cor; ctx.lineWidth = 3; ctx.setLineDash(it.tracejado ? [5, 4] : []); ctx.beginPath(); ctx.moveTo(x, y); ctx.lineTo(x+18, y); ctx.stroke(); ctx.setLineDash([]); }
+      ctx.fillStyle = "#44506A"; ctx.fillText(it.r, x + sw, y);
+    });
+  });
+}
+const LEG_ANOS = ano => [{r:`${ano} (ano corrente)`, cor:"#283377"}, {r:String(ano-1), cor:"#4A7FB0"}, {r:"anos anteriores", cor:"#C9CED6"}];
+
+async function baixarPNG(svgs, nome, titulo, legenda){
   const lista = svgs.filter(Boolean);
   if (!lista.length){ toast("Nada para exportar nesta seção."); return; }
   const larg = lista.map(s => { const vb = s.viewBox.baseVal; return vb && vb.width ? vb.width : s.clientWidth; });
   const W = Math.max(...larg);
   const alt = lista.map((s, i) => { const vb = s.viewBox.baseVal; return (vb && vb.height ? vb.height : s.clientHeight) * W / larg[i]; });
-  const cab = titulo ? 38 : 8, rod = 24, H = cab + alt.reduce((a, b) => a + b, 0) + rod, k = 2;
+  const leg = (legenda || []).filter(Boolean);
+  const linhasLeg = leg.length ? disporLegenda(document.createElement("canvas").getContext("2d"), leg, 14, W - 14) : [];
+  const topo = titulo ? 34 : 6, cab = topo + (linhasLeg.length ? linhasLeg.length*18 + 6 : 2);
+  const rod = 24, H = cab + alt.reduce((a, b) => a + b, 0) + rod, k = 2;
   const cv = document.createElement("canvas"); cv.width = Math.round(W*k); cv.height = Math.round(H*k);
   const ctx = cv.getContext("2d"); ctx.scale(k, k);
   ctx.fillStyle = "#fff"; ctx.fillRect(0, 0, W, H);
-  if (titulo){ ctx.fillStyle = "#283377"; ctx.font = "bold 16px Arial"; ctx.fillText(titulo, 14, 25); }
+  if (titulo){ ctx.fillStyle = "#283377"; ctx.font = "bold 16px Arial"; ctx.textBaseline = "alphabetic"; ctx.fillText(titulo, 14, 25); }
+  if (linhasLeg.length) legendaPNG(ctx, linhasLeg, topo + 11);
   let y = cab;
   for (let i=0;i<lista.length;i++){ const im = await imagemDeSVG(lista[i]); ctx.drawImage(im, 0, y, W, alt[i]); y += alt[i]; }
-  ctx.fillStyle = "#6F7582"; ctx.font = "11px Arial"; ctx.fillText(RODAPE, 14, H - 8);
+  ctx.fillStyle = "#6F7582"; ctx.font = "11px Arial"; ctx.textBaseline = "alphabetic"; ctx.fillText(RODAPE, 14, H - 8);
   cv.toBlob(b => { baixarArquivo(b, nome); toast("Imagem gerada. (Na página publicada no claude.ai o download é bloqueado; abra o arquivo local.)"); }, "image/png");
 }
-async function baixarPDF(titulo, sub, colunas, linhas, nome, alinhaDireita){
+const AZUL = [40, 51, 119], CINZA = [111, 117, 130], LINHA = [226, 228, 232], TINTA = [34, 38, 46];
+function simboloPDF(doc, tipo, cx, cy){
+  if (tipo==="fio"){ doc.setFillColor(74, 127, 176); doc.circle(cx, cy, 3.6, "F"); }
+  else { doc.setFillColor(...AZUL); doc.triangle(cx, cy-4.4, cx+4.6, cy+3.4, cx-4.6, cy+3.4, "F"); }
+}
+// PNG de cada minigráfico que está na tela, para entrar na célula do PDF
+async function minisPNG(lista){
+  const out = {};
+  for (const r of lista){
+    const svg = $(`[data-mini="${CSS.escape(r.nome)}"] svg`);
+    if (!svg) continue;
+    const im = await imagemDeSVG(svg), k = 3;
+    const cv = document.createElement("canvas"); cv.width = 132*k; cv.height = 30*k;
+    const ctx = cv.getContext("2d"); ctx.scale(k, k); ctx.drawImage(im, 0, 0, 132, 30);
+    out[r.nome] = cv.toDataURL("image/png");
+  }
+  return out;
+}
+// tabela da bacia em PDF com o mesmo desenho da tela (sem o seletor: a variável do minigráfico entra no título da coluna)
+async function pdfTabelaBacia(lista, kMini, rotMini){
   try { await carregarScript(CDN_JSPDF); await carregarScript(CDN_AUTOTABLE); }
   catch (e){ toast("Não foi possível carregar a biblioteca de PDF (rede bloqueada neste ambiente)."); return; }
-  const doc = new window.jspdf.jsPDF({orientation:"landscape", unit:"pt", format:"a4"});
-  const larg = doc.internal.pageSize.getWidth(), altura = doc.internal.pageSize.getHeight();
-  doc.setFont("helvetica", "bold"); doc.setFontSize(14); doc.setTextColor(40, 51, 119); doc.text(titulo, 40, 46);
-  doc.setFont("helvetica", "normal"); doc.setFontSize(9); doc.setTextColor(75, 82, 96);
-  doc.text(doc.splitTextToSize(sub, larg - 80), 40, 62);
-  const colStyles = {};
-  (alinhaDireita||[]).forEach(i => colStyles[i] = {halign:"right"});
-  doc.autoTable({startY: 86, head:[colunas], body: linhas, columnStyles: colStyles,
-    styles:{font:"helvetica", fontSize:9, cellPadding:4, lineColor:[226,228,232], lineWidth:.5},
-    headStyles:{fillColor:[40, 51, 119], textColor:255, halign:"left"}, alternateRowStyles:{fillColor:[243, 244, 246]}, margin:{left:40, right:40}});
-  doc.setFontSize(8); doc.setTextColor(111, 117, 130); doc.text(RODAPE, 40, altura - 22);
-  doc.save(nome);
+  const dia = lista[0].dia, minis = await minisPNG(lista);
+  const doc = new window.jspdf.jsPDF({orientation:"landscape", unit:"pt", format:"a4", compress:true});
+  const larg = doc.internal.pageSize.getWidth(), alt = doc.internal.pageSize.getHeight();
+  const nRes = lista.filter(r => r.tipo!=="fio").length, nFio = lista.length - nRes;
+  doc.setFont("helvetica", "bold"); doc.setFontSize(15); doc.setTextColor(...AZUL);
+  doc.text(`Bacia do Grande · usinas em ${dBR(dia)}`, 40, 46);
+  doc.setFont("helvetica", "normal"); doc.setFontSize(8.5); doc.setTextColor(...CINZA);
+  doc.text(doc.splitTextToSize(`Base diária, de montante para jusante · ${nRes} usinas com reservatório e ${nFio} a fio d'água · minigráfico: 30 dias de ${rotMini} até ${dBR(dia)}.`
+    + ` Fontes: ${D.fontes.medicoes}; ${D.fontes.sar0}.`, larg - 80), 40, 61);
+  doc.autoTable({
+    startY: 88, theme:"plain", margin:{left:40, right:40},
+    head: [["Usina", "Afluente", "Defluente", "Turbinada", "Vertida", "Nível", "Volume útil", `Últimos 30 dias — ${rotMini}`],
+           ["", "m³/s", "m³/s", "m³/s", "m³/s", "m", "%", UNID_MINI[kMini]]],
+    body: lista.map(r => [caso(r.nome), fint(r.afl), fint(r.defl), fint(r.turb), fint(r.vert), fmt(r.cota, 2), r.tipo==="fio" ? "–" : fmt(r.vu, 1), ""]),
+    styles:{font:"helvetica", fontSize:9.5, textColor:TINTA, cellPadding:{top:6, right:6, bottom:6, left:6}, valign:"middle"},
+    headStyles:{fontStyle:"bold", textColor:AZUL, halign:"right"},
+    columnStyles:{0:{halign:"left", fontStyle:"bold", textColor:AZUL, cellWidth:132, cellPadding:{top:6, right:6, bottom:6, left:24}},
+                  1:{halign:"right", cellWidth:74}, 2:{halign:"right", cellWidth:74}, 3:{halign:"right", cellWidth:74},
+                  4:{halign:"right", cellWidth:74}, 5:{halign:"right", cellWidth:74}, 6:{halign:"right", cellWidth:76}, 7:{halign:"left"}},
+    didParseCell: d => {
+      if (d.column.index===7) d.cell.styles.halign = "left";
+      if (d.section==="head" && d.column.index===0) d.cell.styles.halign = "left";
+      const pl = d.column.index===0 ? 24 : 6;
+      if (d.section==="head" && d.row.index===0) d.cell.styles.cellPadding = {top:6, right:6, bottom:1, left:pl};
+      if (d.section==="head" && d.row.index===1){ d.cell.styles.fontStyle = "normal"; d.cell.styles.fontSize = 8; d.cell.styles.textColor = CINZA; d.cell.styles.cellPadding = {top:0, right:6, bottom:5, left:pl}; }
+    },
+    didDrawCell: d => {
+      const {x, y, width, height} = d.cell;
+      if (d.section==="head" && d.row.index===1){ doc.setDrawColor(...AZUL); doc.setLineWidth(1.4); doc.line(x, y+height, x+width, y+height); }
+      if (d.section!=="body") return;
+      doc.setDrawColor(...LINHA); doc.setLineWidth(.6); doc.line(x, y+height, x+width, y+height);
+      const r = lista[d.row.index];
+      if (d.column.index===0) simboloPDF(doc, r.tipo, x+13, y+height/2);
+      if (d.column.index===7 && minis[r.nome]){
+        const w = Math.min(width-14, 152), h = 19;
+        doc.addImage(minis[r.nome], "PNG", x+7, y+(height-h)/2, w, h, r.nome, "FAST");
+      }
+    },
+  });
+  doc.setFontSize(8); doc.setTextColor(...CINZA); doc.text(RODAPE, 40, alt - 22);
+  doc.save(`sar_grande_${dia}.pdf`);
   toast("PDF gerado. (Na página publicada no claude.ai o download é bloqueado; abra o arquivo local.)");
 }
 
@@ -725,6 +805,7 @@ function paginaSIN(){
     </nav>
 
     <section class="cartao secao" id="s-bacias" aria-labelledby="t-bacias">
+      ${barraBaixar([["baixar-mapa-sin", "PNG", "Baixar o mapa das bacias como imagem"]])}
       <h2 id="t-bacias"><small>1</small>Bacias</h2>
       <p class="sub">As 22 bacias usadas pelo ONS. Passe o mouse para destacar e clique para abrir a página da bacia.</p>
     <div class="explorar">
@@ -758,12 +839,14 @@ function paginaSIN(){
     </section>
 
     <section class="cartao secao" id="s-ano" aria-labelledby="t-ano">
+      ${barraBaixar([["baixar-equiv-png", "PNG", "Baixar o gráfico como imagem"]])}
       <h2 id="t-ano"><small>3</small>Ao longo do ano</h2>
       <p class="sub">Volume útil do reservatório equivalente dia a dia, de ${Object.keys(S)[0].slice(0,4)} a ${ult.slice(0,4)}. Passe o mouse para comparar o mesmo dia nos cinco anos.</p>
       <div class="graf" id="g-equiv"></div>
     </section>
 
     <section class="cartao secao" id="s-dia" aria-labelledby="t-dia">
+      ${barraBaixar([["baixar-barras-png", "PNG", "Baixar o gráfico como imagem"]])}
       <h2 id="t-dia"><small>4</small>O mesmo dia em outros anos</h2>
       <p class="sub">Volume útil do reservatório equivalente na data escolhida, em cada ano da série.</p>
       <div class="cab-graf" style="margin-bottom:6px"><span></span><label class="data-ref">Data de referência <input type="date" id="dia-ref" min="${ult.slice(0,4)}-01-01" max="${ult}" value="${ult}"></label></div>
@@ -783,6 +866,11 @@ function paginaSIN(){
   graficoBarras($("#g-barras"), ult);
   $("#dia-ref").addEventListener("change", e => { if (S[e.target.value] != null) graficoBarras($("#g-barras"), e.target.value); });
   mapaSIN($("#mapa-sin"));
+  const anoEq = +ult.slice(0,4);
+  $("#baixar-mapa-sin").onclick = () => baixarPNG([$("#mapa-sin svg")], "sar_sin_bacias.png", `Bacias do SIN acompanhadas pelo SAR · ${dBR(D.data)}`,
+    [{r:"bacias acompanhadas", cor:"#CFDDEC", area:true}, {r:"demais áreas do país", cor:"#E9EBEF", area:true}]);
+  $("#baixar-equiv-png").onclick = () => baixarPNG([$("#g-equiv svg")], "sar_sin_equivalente_ano.png", `Reservatório equivalente do SIN ao longo do ano · até ${dBR(ult)}`, LEG_ANOS(anoEq));
+  $("#baixar-barras-png").onclick = () => baixarPNG([$("#g-barras svg")], "sar_sin_equivalente_por_ano.png", `Reservatório equivalente do SIN em ${dBR($("#dia-ref").value)} de cada ano`, LEG_ANOS(anoEq));
   listaBacias($("#lista-bacias"));
   mapaLeaflet();
 }
@@ -984,12 +1072,9 @@ function paginaGrande(){
   $("#dia-bacia").addEventListener("change", e => { const v = e.target.value; if (v && v <= D.data && v >= e.target.min) render(v); });
   $("#var-mini").addEventListener("change", e => minigraficos(doDia, e.target.value));
   $("#baixar-csv").onclick = () => baixarCSV(doDia);
-  $("#baixar-pdf").onclick = () => baixarPDF(`Bacia do Grande · usinas em ${dBR(doDia[0].dia)}`,
-    `Base diária, último dia fechado escolhido pelo usuário. Fontes: ${D.fontes.medicoes}; ${D.fontes.sar0}.`,
-    ["Usina", "Tipo", "Afluente (m³/s)", "Defluente (m³/s)", "Turbinada (m³/s)", "Vertida (m³/s)", "Nível (m)", "Volume útil (%)"],
-    doDia.map(r => [caso(r.nome), TIPO[r.tipo], fint(r.afl), fint(r.defl), fint(r.turb), fint(r.vert), fmt(r.cota, 2), r.tipo==="fio" ? "–" : fmt(r.vu, 1)]),
-    `sar_grande_${doDia[0].dia}.pdf`, [2, 3, 4, 5, 6, 7]);
-  $("#baixar-diag").onclick = () => baixarPNG([$("#diag-grande svg")], `sar_grande_cascata_${doDia[0].dia}.png`, `Bacia do Grande · cascata · ${dBR(doDia[0].dia)}`);
+  $("#baixar-pdf").onclick = () => pdfTabelaBacia(doDia, $("#var-mini").value, $("#var-mini").selectedOptions[0].textContent.trim());
+  $("#baixar-diag").onclick = () => baixarPNG([$("#diag-grande svg")], `sar_grande_cascata_${doDia[0].dia}.png`, `Bacia do Grande · cascata · ${dBR(doDia[0].dia)}`,
+    [{r:"com reservatório (volume útil abaixo do nome)", simbolo:"res"}, {r:"a fio d'água", simbolo:"fio"}, {r:"número acima do símbolo: defluente do dia, em m³/s"}]);
   $("#baixar-kmz-bacia").onclick = () => baixarKMZ(doDia);
   render(D.data);
 }
@@ -1182,7 +1267,7 @@ function diagramaGrande(host, lista){
 /* ============================================================ ficha do reservatório (Furnas) */
 const VARS = {afl:{r:"Afluente", u:"m³/s", cor:"#283377", dec:0}, defl:{r:"Defluente", u:"m³/s", cor:"#D9822B", dec:0}, turb:{r:"Turbinada", u:"m³/s", cor:"#2E9E6B", dec:0},
               vert:{r:"Vertida", u:"m³/s", cor:"#C0392B", dec:0}, nat:{r:"Vazão natural", u:"m³/s", cor:"#7B8794", dec:0, tracejado:true},
-              cota:{r:"Nível", u:"m", cor:"#283377", dec:2}, vu:{r:"Volume útil", u:"%", cor:"#283377", dec:1}};
+              cota:{r:"Nível", u:"m", cor:"#17868F", dec:2}, vu:{r:"Volume útil", u:"%", cor:"#17868F", dec:1}};
 const MESES = ["jan","fev","mar","abr","mai","jun","jul","ago","set","out","nov","dez"];
 let fichaEstado = null;
 
@@ -1231,7 +1316,7 @@ function paginaFicha(){
         <fieldset><legend>Base</legend><label><input type="radio" name="base" value="dia" checked> Diária</label><label><input type="radio" name="base" value="hora"> Horária</label></fieldset>
         <fieldset class="largo"><legend>Período</legend><span id="presets" class="presets"></span><span class="datas"><label>de <input type="date" id="g-de"></label><label>até <input type="date" id="g-ate"></label></span></fieldset>
         <fieldset><legend>Gráfico de cima: vazões</legend>${["afl","defl","turb","vert","nat"].map(k => `<label><input type="checkbox" name="vaz" value="${k}"${k==="afl"||k==="defl" ? " checked" : ""}> <i class="sw" style="border-color:${VARS[k].cor}${VARS[k].tracejado ? ";border-style:dashed" : ""}"></i>${VARS[k].r}</label>`).join("")}</fieldset>
-        <fieldset><legend>Gráfico de baixo</legend><label><input type="radio" name="seg" value="vu" checked> Volume útil</label><label><input type="radio" name="seg" value="cota"> Nível</label></fieldset>
+        <fieldset><legend>Gráfico de baixo</legend>${["vu","cota"].map((k,i) => `<label><input type="radio" name="seg" value="${k}"${i===0 ? " checked" : ""}> <i class="sw" style="border-color:${VARS[k].cor}"></i>${VARS[k].r}</label>`).join("")}</fieldset>
       </div>
       <p class="nota aviso-afl" id="aviso-afl" hidden><b>Atenção:</b> na base horária a afluência é calculada por balanço hídrico (variação de volume mais defluência) e oscila, com valores negativos e picos que não são vazão real. Use a base diária para afluência.</p>
       <div class="graf" id="g-vazoes"></div>
@@ -1306,15 +1391,20 @@ function paginaFicha(){
   $$("input[name=vaz], input[name=seg]").forEach(i => i.onchange = desenharGraficos);
   $("#g-de").onchange = $("#g-ate").onchange = () => { $$("#presets .preset").forEach(x => x.classList.remove("ativo")); desenharGraficos(); };
   $("#baixar-serie").onclick = baixarSerie;
-  $("#baixar-graf-png").onclick = () => baixarPNG([$("#g-vazoes svg"), $("#g-segundo svg")],
-    `sar_furnas_graficos_${$("#g-de").value}_${$("#g-ate").value}.png`,
-    `Furnas · ${$("input[name=base]:checked").value==="dia" ? "base diária" : "base horária"} · ${dBR($("#g-de").value)} a ${dBR($("#g-ate").value)}`);
+  $("#baixar-graf-png").onclick = () => {
+    const seg = $("input[name=seg]:checked").value;
+    const leg = $$("input[name=vaz]:checked").map(i => ({r: VARS[i.value].r, cor: VARS[i.value].cor, tracejado: VARS[i.value].tracejado}))
+      .concat([{r: VARS[seg].r, cor: VARS[seg].cor}]);
+    baixarPNG([$("#g-vazoes svg"), $("#g-segundo svg")],
+      `sar_furnas_graficos_${$("#g-de").value}_${$("#g-ate").value}.png`,
+      `Furnas · ${$("input[name=base]:checked").value==="dia" ? "base diária" : "base horária"} · ${dBR($("#g-de").value)} a ${dBR($("#g-ate").value)}`, leg);
+  };
   montarPresets();
 
   // 3. mesmo dia
   $("#dia-ref-f").onchange = $("#var-dia").onchange = graficoMesmoDia;
   $("#baixar-dia-png").onclick = () => baixarPNG([$("#g-dia svg")], `sar_furnas_mesmo_dia_${$("#dia-ref-f").value}.png`,
-    `Furnas · ${VARS[$("#var-dia").value].r} em ${dBR($("#dia-ref-f").value).slice(0,5)} de cada ano`);
+    `Furnas · ${VARS[$("#var-dia").value].r} em ${dBR($("#dia-ref-f").value).slice(0,5)} de cada ano`, LEG_ANOS(+fichaEstado.ult.data.slice(0,4)));
   graficoMesmoDia();
 
   // 4. ano contra anos
@@ -1324,7 +1414,7 @@ function paginaFicha(){
   $("#anos-chips").innerHTML = anos.map(a => `<button type="button" class="chip-ano${fichaEstado.anosSel.has(a) ? " on" : ""}" data-a="${a}">${a}</button>`).join("");
   $$("#anos-chips .chip-ano").forEach(b => b.onclick = () => { const a = +b.dataset.a; fichaEstado.anosSel.has(a) ? fichaEstado.anosSel.delete(a) : fichaEstado.anosSel.add(a); b.classList.toggle("on"); graficoAnos(); });
   $("#var-ano").onchange = graficoAnos;
-  $("#baixar-ano-png").onclick = () => baixarPNG([$("#g-ano svg")], `sar_furnas_ano_contra_anos.png`, `Furnas · ${VARS[$("#var-ano").value].r} ao longo do ano`);
+  $("#baixar-ano-png").onclick = () => baixarPNG([$("#g-ano svg")], `sar_furnas_ano_contra_anos.png`, `Furnas · ${VARS[$("#var-ano").value].r} ao longo do ano`, LEG_ANOS(+fichaEstado.ult.data.slice(0,4)));
   graficoAnos();
 }
 function redesenharFicha(){ if (!fichaEstado) return; desenharGraficos(); graficoMesmoDia(); graficoAnos(); }
@@ -1371,6 +1461,7 @@ function graficoLinhas(host, S, series, o){
   if (!vals.length){ host.innerHTML = `<p class="nota" style="padding:14px 0">Sem dados de ${series.map(s => s.r.toLowerCase()).join(", ")} no período.</p>`; return; }
   let lo = Math.min(...vals), hi = Math.max(...vals); if (hi===lo){ hi += 1; lo -= 1; }
   const pad = (hi-lo)*.06; lo -= pad; hi += pad;
+  if (o.unidade==="m³/s" && Math.min(...vals) >= 0 && lo < 0) lo = 0;
   if (o.unidade==="m³/s" && lo > 0 && lo < (hi-lo)*.3) lo = 0;
   if (series.length===1 && series[0].k==="vu"){ lo = 0; hi = Math.max(100, Math.max(...vals)); } // volume útil: escala fixa de 0 a 100%
   const t0 = S[0].t, t1 = S[S.length-1].t;
@@ -1380,7 +1471,7 @@ function graficoLinhas(host, S, series, o){
   const nY = 5, passoY = niceStep((hi-lo)/nY);
   for (let v = Math.ceil(lo/passoY)*passoY; v <= hi; v += passoY){
     eixo.append(svgEl("line",{x1:m.l,x2:W-m.r,y1:Y(v),y2:Y(v),stroke:"#ECEEF1"}));
-    const tx = svgEl("text",{x:m.l-8,y:Y(v)+4,"text-anchor":"end"}); tx.textContent = fmt(v, passoY < 1 ? 2 : 0); eixo.append(tx);
+    const tx = svgEl("text",{x:m.l-8,y:Y(v)+4,"text-anchor":"end"}); tx.textContent = fmt(Math.abs(v) < 1e-9 ? 0 : v, passoY < 1 ? 2 : 0); eixo.append(tx);
   }
   marcasTempo(t0, t1).forEach(mk => { eixo.append(svgEl("line",{x1:X(mk.t),x2:X(mk.t),y1:H-m.b,y2:H-m.b+4,stroke:"#C9CDD4"})); const tx = svgEl("text",{x:X(mk.t),y:H-7,"text-anchor":"middle"}); tx.textContent = mk.txt; eixo.append(tx); });
   const rot = svgEl("text",{x:m.l, y:16, "font-size":13.5, fill:"#283377", "font-weight":700, "font-family":"Arial"}); rot.textContent = o.rotulo; eixo.append(rot);
@@ -1425,7 +1516,7 @@ function graficoMesmoDia(){
   const X = i => m.l + i*(W-m.l-m.r)/anos.length, bw = Math.min(28, (W-m.l-m.r)/anos.length*.7), Y = v => m.t + (hi-v)/(hi-lo)*(H-m.t-m.b);
   const svg = svgEl("svg",{viewBox:`0 0 ${W} ${H}`, role:"img", "aria-label":`${V.r} em ${dBR(ref).slice(0,5)} de cada ano`});
   const eixo = svgEl("g",{class:"eixo"}); const passoY = niceStep((hi-lo)/5);
-  for (let v = Math.ceil(lo/passoY)*passoY; v <= hi; v += passoY){ eixo.append(svgEl("line",{x1:m.l,x2:W-m.r,y1:Y(v),y2:Y(v),stroke:"#ECEEF1"})); const tx = svgEl("text",{x:m.l-8,y:Y(v)+4,"text-anchor":"end"}); tx.textContent = fmt(v, passoY < 1 ? 2 : 0); eixo.append(tx); }
+  for (let v = Math.ceil(lo/passoY)*passoY; v <= hi; v += passoY){ eixo.append(svgEl("line",{x1:m.l,x2:W-m.r,y1:Y(v),y2:Y(v),stroke:"#ECEEF1"})); const tx = svgEl("text",{x:m.l-8,y:Y(v)+4,"text-anchor":"end"}); tx.textContent = fmt(Math.abs(v) < 1e-9 ? 0 : v, passoY < 1 ? 2 : 0); eixo.append(tx); }
   anos.forEach((a,i) => { if (anos.length <= 14 || a%2===0){ const tx = svgEl("text",{x:X(i)+bw/2+(X(1)-X(0)-bw)/2,y:H-8,"text-anchor":"middle"}); tx.textContent = a; eixo.append(tx); } });
   const rot = svgEl("text",{x:m.l, y:10, "font-size":11.5, fill:"#44506A", "font-weight":700}); rot.textContent = `${V.r} (${V.u}) em ${dBR(ref).slice(0,5)}`; rot.setAttribute("y",16); rot.setAttribute("font-size",13.5); rot.setAttribute("fill","#283377"); eixo.append(rot);
   svg.append(eixo);
@@ -1458,7 +1549,7 @@ function graficoAnos(){
   const cor = a => a===anoAtual ? "#283377" : a===anoAtual-1 ? "#4A7FB0" : "#B9C7D8";
   const svg = svgEl("svg",{viewBox:`0 0 ${W} ${H}`, role:"img", "aria-label":`${V.r} ao longo do ano, ${anos.join(", ")}`});
   const eixo = svgEl("g",{class:"eixo"}); const passoY = niceStep((hi-lo)/5);
-  for (let v = Math.ceil(lo/passoY)*passoY; v <= hi; v += passoY){ eixo.append(svgEl("line",{x1:m.l,x2:W-m.r,y1:Y(v),y2:Y(v),stroke:"#ECEEF1"})); const tx = svgEl("text",{x:m.l-8,y:Y(v)+4,"text-anchor":"end"}); tx.textContent = fmt(v, passoY < 1 ? 2 : 0); eixo.append(tx); }
+  for (let v = Math.ceil(lo/passoY)*passoY; v <= hi; v += passoY){ eixo.append(svgEl("line",{x1:m.l,x2:W-m.r,y1:Y(v),y2:Y(v),stroke:"#ECEEF1"})); const tx = svgEl("text",{x:m.l-8,y:Y(v)+4,"text-anchor":"end"}); tx.textContent = fmt(Math.abs(v) < 1e-9 ? 0 : v, passoY < 1 ? 2 : 0); eixo.append(tx); }
   MESES.forEach((mm,q) => { const tx = svgEl("text",{x:X(idx(`2025-${String(q+1).padStart(2,"0")}-15`)),y:H-8,"text-anchor":"middle"}); tx.textContent = mm; eixo.append(tx); });
   const rot = svgEl("text",{x:m.l, y:10, "font-size":11.5, fill:"#44506A", "font-weight":700}); rot.textContent = `${V.r} (${V.u})`; rot.setAttribute("y",16); rot.setAttribute("font-size",13.5); rot.setAttribute("fill","#283377"); eixo.append(rot);
   svg.append(eixo);
