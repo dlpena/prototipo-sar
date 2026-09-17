@@ -279,7 +279,10 @@ body.na-inicio #conteudo{padding-top:22px}
 .escala-uf i{width:22px;height:11px;border-radius:2px;display:inline-block;border:1px solid rgba(0,0,0,.08)}
 #mapa-res-ne{height:620px;border:1px solid var(--linha);border-radius:4px;position:relative;z-index:0;isolation:isolate}
 @media (max-width:980px){#mapa-res-ne{height:420px}}
-.grade-ne{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:22px;align-items:start}
+/* a tabela dos estados tem seis colunas e pede mais largura que o mapa: sem isso aparecia barra de
+   rolagem lateral na tabela, contra a diretriz de não ter rolagem interna (Diego) */
+.grade-ne{display:grid;grid-template-columns:minmax(0,.84fr) minmax(0,1.16fr);gap:22px;align-items:start}
+
 #mapa-ne svg{display:block;width:100%;height:auto;max-height:680px}
 #mapa-ne .uf-ne{transition:fill-opacity .12s,fill .12s}
 #mapa-ne .uf-ne:hover,#mapa-ne .uf-ne.acesa{fill-opacity:1;stroke:#283377;stroke-width:1.6;stroke-linejoin:round}
@@ -294,7 +297,10 @@ th[data-ord]{cursor:pointer;user-select:none}
 th[data-ord]:hover{color:var(--ana)}
 th.ord-asc::after{content:' ▲';font-size:9px}
 th.ord-desc::after{content:' ▼';font-size:9px}
-@media (max-width:980px){.grade-ne{grid-template-columns:1fr}#mapa-ce{height:420px}}
+/* a tabela dos estados pede 665 px: só acima de 1320 px as duas colunas cabem sem rolagem lateral;
+   abaixo disso mapa em cima e tabela embaixo, do jeito que o Diego preferiu na página da bacia */
+@media (max-width:1320px){.grade-ne{grid-template-columns:1fr}.grade-ne>#mapa-ne{width:100%;max-width:620px;margin-inline:auto}}
+@media (max-width:980px){#mapa-ce{height:420px}}
 /* ---------- bacia ---------- */
 .acao{display:inline-flex;align-items:center;gap:8px;background:var(--ana);color:#fff;border:0;border-radius:2px;padding:10px 16px;font-weight:700;cursor:pointer;text-decoration:none;font-size:14px}
 .acao:hover{background:#1f285e}
