@@ -281,8 +281,9 @@ body.na-inicio #conteudo{padding-top:22px}
 @media (max-width:980px){#mapa-res-ne{height:420px}}
 .grade-ne{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:22px;align-items:start}
 #mapa-ne svg{display:block;width:100%;height:auto;max-height:680px}
-#mapa-ne .uf-ne{transition:fill-opacity .12s}
-#mapa-ne .uf-ne:hover,#mapa-ne .uf-ne.acesa{fill-opacity:1;stroke:#283377;stroke-width:1.8}
+#mapa-ne .uf-ne{transition:fill-opacity .12s,fill .12s}
+#mapa-ne .uf-ne:hover,#mapa-ne .uf-ne.acesa{fill-opacity:1;stroke:#283377;stroke-width:1.6;stroke-linejoin:round}
+#mapa-ne .uf-ne.apagada{fill-opacity:.3}
 #mapa-ce{height:560px;border:1px solid var(--linha);border-radius:4px;position:relative;z-index:0;isolation:isolate}
 .bola{display:inline-block;width:11px;height:11px;border-radius:50%;vertical-align:-1px;margin-right:7px;border:1px solid rgba(255,255,255,.9)}
 .legenda .bola{margin-right:6px}
@@ -2104,13 +2105,13 @@ function paginaNE(){
     <section class="cartao secao" id="n-estados" aria-labelledby="t-n-estados">
       ${barraBaixar([["baixar-ne-mapa", "PNG", "Baixar o mapa dos estados como imagem"], ["baixar-ne-csv", "CSV", "Baixar a tabela dos estados em CSV"]])}
       <h2 id="t-n-estados"><small>1</small>Estados</h2>
-      <p class="sub">Volume acumulado de cada estado na data de referência. Passe o mouse para o resumo; clique para abrir o estado.</p>
+      <p class="sub">Volume acumulado de cada estado na data de referência. Passe o mouse no mapa ou na tabela para ligar um ao outro; clique para abrir o estado.</p>
       ${legendaEscalaUF()}
       <div class="grade-ne">
         <div id="mapa-ne" style="position:relative"></div>
         <div class="tab-box"><table id="tab-estados">
-          <thead><tr><th data-ord="estado">Estado</th><th class="r" data-ord="n" data-tipo="num">Reservatórios</th><th class="r" data-ord="com_dado" data-tipo="num">Com medição</th><th class="r" data-ord="volume_hm3" data-tipo="num">Volume</th><th class="r" data-ord="volume_pct" data-tipo="num">Volume</th></tr>
-          <tr class="unid"><th></th><th class="r">total</th><th class="r">janela de ${NEd.limiar_dias} dias</th><th class="r">hm³</th><th class="r">%</th></tr></thead>
+          <thead><tr><th data-ord="estado">Estado</th><th class="r" data-ord="n" data-tipo="num">Reservatórios</th><th class="r" data-ord="com_dado" data-tipo="num">Com medição</th><th class="r" data-ord="capacidade_com_dado_hm3" data-tipo="num">Capacidade</th><th class="r" data-ord="volume_hm3" data-tipo="num">Volume</th><th class="r" data-ord="volume_pct" data-tipo="num">Volume</th></tr>
+          <tr class="unid"><th></th><th class="r">total</th><th class="r">janela de ${NEd.limiar_dias} dias</th><th class="r">equivalente, hm³</th><th class="r">hm³</th><th class="r">%</th></tr></thead>
           <tbody id="corpo-estados"></tbody>
           <tfoot id="pe-estados"></tfoot>
         </table></div>
@@ -2165,7 +2166,7 @@ function paginaNE(){
     linhas.forEach(e => {
       const tr = document.createElement("tr"); tr.dataset.uf = e.uf; tr.tabIndex = 0;
       tr.innerHTML = `<td><i class="bola" style="background:${corUF(e.volume_pct)}"></i><span class="nm">${e.estado}</span></td>
-        <td class="r num">${fint(e.n)}</td><td class="r num">${fint(e.com_dado)}</td><td class="r num">${e.volume_hm3 ? fint(e.volume_hm3) : "–"}</td><td class="r num">${e.volume_pct==null ? "–" : fmt(e.volume_pct,1)}</td>`;
+        <td class="r num">${fint(e.n)}</td><td class="r num">${fint(e.com_dado)}</td><td class="r num">${e.capacidade_com_dado_hm3 ? fint(e.capacidade_com_dado_hm3) : "–"}</td><td class="r num">${e.volume_hm3 ? fint(e.volume_hm3) : "–"}</td><td class="r num">${e.volume_pct==null ? "–" : fmt(e.volume_pct,1)}</td>`;
       tr.addEventListener("pointerenter", () => acenderUF(e.uf));
       tr.addEventListener("pointerleave", () => acenderUF(null));
       tr.addEventListener("click", () => abrirEstado(e.uf));
@@ -2186,7 +2187,7 @@ function paginaNE(){
     $("#carimbo-com").innerHTML = `<b>${fint(tot.com_dado)}</b> com medição na janela de ${NEd.limiar_dias} dias`;
     linhas.forEach(l => Object.assign(l, P.estados.find(e => e.uf===l.uf)));
     desenhar();
-    $("#pe-estados").innerHTML = `<tr><th>Nordeste</th><th class="r num">${fint(tot.n)}</th><th class="r num">${fint(tot.com_dado)}</th><th class="r num">${fint(tot.volume_hm3)}</th><th class="r num">${fmt(tot.volume_pct,1)}</th></tr>`;
+    $("#pe-estados").innerHTML = `<tr><th>Nordeste</th><th class="r num">${fint(tot.n)}</th><th class="r num">${fint(tot.com_dado)}</th><th class="r num">${fint(tot.capacidade_com_dado_hm3)}</th><th class="r num">${fint(tot.volume_hm3)}</th><th class="r num">${fmt(tot.volume_pct,1)}</th></tr>`;
     mapaUF.atualizar();
 
     $("#vol-sub").textContent = `Soma dos ${fint(tot.com_dado)} reservatórios com medição na janela de ${NEd.limiar_dias} dias em torno de ${ref}.`;
@@ -2251,42 +2252,40 @@ function paginaNE(){
 }
 const abrirEstado = uf => { if (uf==="CE") location.hash = "ne/CE"; else toast(`${NEd.estados.find(e => e.uf===uf).estado}: no protótipo só o Ceará está montado.`); };
 function acenderUF(uf){
-  $$("#mapa-ne .uf-ne").forEach(g => g.classList.toggle("acesa", g.dataset.uf===uf));
+  $$("#mapa-ne .uf-ne").forEach(g => {
+    const ativa = !!uf && g.dataset.uf===uf;
+    g.classList.toggle("acesa", ativa);
+    g.classList.toggle("apagada", !!uf && !ativa);     // mesma leitura do mapa do SIN
+    if (ativa){                                        // por último no SVG, antes das siglas: a borda azul
+      const svg = g.ownerSVGElement, rot = svg && svg.querySelector(".rot-uf");
+      if (rot) svg.insertBefore(g, rot); else svg.append(g);
+    }
+  });
   $$("#corpo-estados tr").forEach(tr => tr.classList.toggle("acesa", tr.dataset.uf===uf));
 }
 function mapaNE(host){
   const M = NEd.mapa;
   const svg = svgEl("svg",{viewBox:`0 0 ${M.w} ${M.h}`, role:"img", "aria-label":"Estados do módulo Nordeste e Semiárido pelo volume acumulado"});
-  const tip = document.createElement("div"); tip.className = "tip"; tip.hidden = true;
   const areas = {};
   M.ufs.forEach(u => {
-    const p = svgEl("path",{d:u.d, stroke:"#fff", "stroke-width":1.6, class:"uf-ne"});
+    const p = svgEl("path",{d:u.d, stroke:"#fff", "stroke-width":2.2, "stroke-linejoin":"round", class:"uf-ne"});
     p.dataset.uf = u.uf; p.style.cursor = "pointer";
     areas[u.uf] = p;
-    p.addEventListener("pointerenter", () => {
-      const e = SIT.estados.find(x => x.uf===u.uf);
-      acenderUF(u.uf);
-      tip.innerHTML = `<b>${e.estado}</b>` +
-        `<div class="l"><span><i class="bola" style="background:${corUF(e.volume_pct)}"></i>Volume acumulado</span><span class="num">${e.volume_pct==null?"sem informação":fmt(e.volume_pct,1)+"%"}</span></div>` +
-        `<div class="l"><span>Volume</span><span class="num">${e.volume_hm3?fint(e.volume_hm3):"–"} hm³</span></div>` +
-        `<div class="l"><span>Capacidade equivalente</span><span class="num">${fint(e.capacidade_com_dado_hm3)} hm³</span></div>` +
-        `<div class="l"><span>Reservatórios</span><span class="num">${fint(e.n)}</span></div>` +
-        `<div class="l"><span>Com medição (${NEd.limiar_dias} dias)</span><span class="num">${fint(e.com_dado)}</span></div>`;
-      tip.hidden = false;
-      const r = host.getBoundingClientRect(), sx = r.width/M.w;
-      let x = u.rot[0]*sx + 12; if (x + 240 > r.width) x = r.width - 250;
-      tip.style.left = Math.max(0,x)+"px"; tip.style.top = Math.max(0, u.rot[1]*sx - 20)+"px";
-    });
-    p.addEventListener("pointerleave", () => { tip.hidden = true; acenderUF(null); });
+    p.addEventListener("pointerenter", () => acenderUF(u.uf));
+    p.addEventListener("pointerleave", () => acenderUF(null));
     p.addEventListener("click", () => abrirEstado(u.uf));
     svg.append(p);
   });
+  // as siglas ficam num grupo à parte: o estado aceso é movido para logo antes dele, para o traço da borda
+  // não ser coberto pelo vizinho desenhado depois
+  const gRot = svgEl("g",{class:"rot-uf"});
   M.ufs.forEach(u => {
     const tx = svgEl("text",{x:u.rot[0], y:u.rot[1], "text-anchor":"middle", "font-size":13, "font-weight":700, "font-family":"Arial",
       fill:"#22262E", "paint-order":"stroke", stroke:"#fff", "stroke-width":3, "pointer-events":"none"});
-    tx.textContent = u.uf; svg.append(tx);
+    tx.textContent = u.uf; gRot.append(tx);
   });
-  host.innerHTML = ""; host.append(svg, tip);
+  svg.append(gRot);
+  host.innerHTML = ""; host.append(svg);
   const atualizar = () => SIT.estados.forEach(e => {
     const p = areas[e.uf];
     p.setAttribute("fill", corUF(e.volume_pct));
