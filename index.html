@@ -228,10 +228,13 @@ body.na-inicio #conteudo{padding-top:22px}
 .fontes-inicio{margin:18px 0 0}
 @media (max-width:980px){.hero{grid-template-columns:1fr;padding:26px 24px}.modulos-grid{grid-template-columns:1fr}.hero h1{font-size:30px}}
 /* ---------- Nordeste e Semiárido ---------- */
-.data-ref select{font:inherit;font-size:12.5px;color:var(--azul);border:1px solid var(--borda);border-radius:6px;padding:3px 6px;background:#fff}
-.carimbo .data-ref{display:inline-flex;align-items:center;gap:6px;color:var(--tinta-2);font-size:12.5px}
-.carimbo .passo{border:1px solid var(--borda);background:#fff;border-radius:6px;color:var(--azul);font-size:13px;line-height:1;padding:4px 7px;cursor:pointer}
-.carimbo .passo:disabled{opacity:.35;cursor:default}
+.barra-data{display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin:14px 0 0;padding:10px 14px;background:#fff;border:1px solid var(--linha);border-left:3px solid var(--azul);border-radius:4px}
+.barra-data .data-ref b{color:var(--azul);font-size:13.5px;font-weight:700;margin-right:2px}
+.barra-data select{font:inherit;font-size:15px;font-weight:700;color:var(--azul);border:1px solid var(--linha-forte);border-radius:4px;padding:5px 8px;background:#fff;cursor:pointer}
+.barra-data .passo{border:1px solid var(--linha-forte);background:#fff;border-radius:4px;color:var(--azul);font-size:15px;line-height:1;padding:6px 10px;cursor:pointer}
+.barra-data .passo:hover:not(:disabled){background:var(--fundo);border-color:var(--azul)}
+.barra-data .passo:disabled{opacity:.3;cursor:default}
+.barra-data .dica{flex:1 1 260px;min-width:0;font-size:12px;color:var(--apagado);line-height:1.4}
 .escala-uf{display:flex;flex-wrap:wrap;align-items:center;gap:0;margin:0 0 10px;font-size:12px;color:var(--tinta-2)}
 .escala-uf b{font-weight:400;margin-right:10px}
 .escala-uf span{display:flex;align-items:center;gap:5px;margin-right:12px}
@@ -1829,13 +1832,14 @@ function resNa(i){
           faixa: velho ? "sem" : faixaPct(v[0])};
 }
 function seletorData(id){
-  return `<label class="data-ref">Data de referência
-    <button class="passo" data-passo="-1" aria-label="Data anterior">‹</button>
+  return `<div class="barra-data"><label class="data-ref" for="${id}"><b>Data de referência</b></label>
+    <button class="passo" data-passo="-1" title="Quinze dias antes" aria-label="Data anterior">‹</button>
     <select id="${id}" aria-label="Data de referência">${NEd.datas.map(d => `<option value="${d}"${d===dataRef?" selected":""}>${dBR(d)}</option>`).join("")}</select>
-    <button class="passo" data-passo="1" aria-label="Data seguinte">›</button></label>`;
+    <button class="passo" data-passo="1" title="Quinze dias depois" aria-label="Data seguinte">›</button>
+    <span class="dica">Cada reservatório entra com a medição mais próxima desta data, até ${NEd.limiar_dias} dias antes ou depois. ${NEd.datas.length} datas no protótipo, de ${NEd.passo_datas} em ${NEd.passo_datas} dias.</span></div>`;
 }
 function ligarSeletor(id, aplicar){
-  const sel = $("#"+id), pai = sel.closest(".data-ref");
+  const sel = $("#"+id), pai = sel.closest(".barra-data");
   const passos = $$(".passo", pai);
   const arrumar = () => { const i = NEd.datas.indexOf(dataRef); passos[0].disabled = i >= NEd.datas.length-1; passos[1].disabled = i <= 0; };
   sel.onchange = () => { dataRef = sel.value; arrumar(); aplicar(); };
@@ -2013,7 +2017,8 @@ function paginaNE(){
     <p class="trilha"><a href="#inicio">Início</a><span class="sep">›</span>Nordeste e Semiárido</p>
     <h1>Nordeste e Semiárido</h1>
     <p class="lead">${esc(T.ne[0])}</p>
-    <div class="carimbo">${seletorData("data-ne")}<span><b>${fint(fixo.n)}</b> reservatórios em <b>10</b> estados</span><span id="carimbo-com"></span></div>`;
+    <div class="carimbo"><span><b>${fint(fixo.n)}</b> reservatórios em <b>10</b> estados</span><span id="carimbo-com"></span></div>
+    ${seletorData("data-ne")}`;
   $("#conteudo").innerHTML = `
     <nav class="indice" aria-label="Seções da página">
       <a href="#ne" data-alvo="n-estados">Estados</a><a href="#ne" data-alvo="n-vol">Volume acumulado</a><a href="#ne" data-alvo="n-ano">Ao longo do ano</a><a href="#ne" data-alvo="n-dia">Mesmo dia em outros anos</a><a href="#ne" data-alvo="n-faixas">Faixas e cobertura</a><a href="#ne" data-alvo="n-mapa">Mapa dos reservatórios</a>
@@ -2219,7 +2224,8 @@ function paginaEstadoNE(uf){
     <p class="trilha"><a href="#inicio">Início</a><span class="sep">›</span><a href="#ne">Nordeste e Semiárido</a><span class="sep">›</span>${estado}</p>
     <h1>${estado}</h1>
     <p class="lead">Reservatórios acompanhados pela ANA em convênio com o órgão gestor estadual, no recorte do semiárido.</p>
-    <div class="carimbo">${seletorData("data-ce")}<span><b>${fint(lista.length)}</b> reservatórios</span><span id="carimbo-ce"></span></div>`;
+    <div class="carimbo"><span><b>${fint(lista.length)}</b> reservatórios</span><span id="carimbo-ce"></span></div>
+    ${seletorData("data-ce")}`;
   $("#conteudo").innerHTML = `
     <nav class="indice" aria-label="Seções da página">
       <a href="#ne/CE" data-alvo="c-mapa">Mapa</a><a href="#ne/CE" data-alvo="c-tab">Reservatórios</a><a href="#ne/CE" data-alvo="c-ano">Ao longo do ano</a><a href="#ne/CE" data-alvo="c-dia">Mesmo dia em outros anos</a>
