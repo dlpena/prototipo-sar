@@ -1562,11 +1562,12 @@ function graficoMesmoDia(){
     r.addEventListener("pointerleave", () => tip.hidden = true);
     svg.append(r);
     // valor de cada barra, na vertical: dentro quando a barra é alta, acima quando é curta
-    const hb = Math.abs(Y(lo)-Y(d.v)), cx = x + bw/2, dentro = hb > 52;
+    const hb = Math.abs(Y(lo)-Y(d.v)), cx = x + bw/2, dentro = hb > 56;
     const cy = dentro ? Y(d.v) + 6 : Y(d.v) - 6;
     // girado -90: "end" escreve para baixo (dentro da barra), "start" escreve para cima (acima da barra)
-    const vt = svgEl("text",{x:cx, y:cy, "text-anchor": dentro ? "end" : "start", "dominant-baseline":"middle", "font-size":10,
-      "font-family":"Arial", fill: dentro ? (escura ? "#fff" : "#3C4453") : "#44506A", transform:`rotate(-90 ${cx} ${cy})`});
+    const vt = svgEl("text",{x:cx, y:cy, "text-anchor": dentro ? "end" : "start", "dominant-baseline":"middle", "font-size":10.5,
+      "font-family":"Arial", "font-weight":600, "letter-spacing":.6, fill: dentro ? (escura ? "#fff" : "#3C4453") : "#3C4453",
+      transform:`rotate(-90 ${cx} ${cy})`});
     vt.textContent = fmt(d.v, V.dec); svg.append(vt);
   });
   host.append(svg, tip);
