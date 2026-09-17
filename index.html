@@ -69,8 +69,8 @@ main{padding-block:26px 60px}
 @media (max-width:640px){.baixar{position:static;justify-content:flex-end;margin:-6px 0 6px}
   @supports selector(:has(*)){.secao:has(.baixar)>h2,.secao:has(.baixar)>p.sub{padding-right:0}}}
 
-.secao>h2{font-size:19px;margin:0 0 2px;color:var(--ana);font-weight:700}
-.secao>h2 small{font-size:13px;color:var(--apagado);font-weight:400;margin-right:8px}
+.secao>h2,.secao .lado>h2{font-size:19px;margin:0 0 2px;color:var(--ana);font-weight:700}
+.secao>h2 small,.secao .lado>h2 small{font-size:13px;color:var(--apagado);font-weight:400;margin-right:8px}
 .secao>p.sub{margin:0 0 14px;color:var(--tinta-2);font-size:14px;max-width:110ch}
 .explorar{margin-top:0}
 .rio{fill:none;stroke:#5F8FC0;stroke-width:.9;stroke-linejoin:round;stroke-linecap:round;pointer-events:none}
@@ -117,6 +117,7 @@ main>section+section,main>.secao+.secao{margin-top:22px}
 .comparacoes li:first-child{border-top:0}
 .comparacoes li span{color:var(--tinta-2)}
 .comparacoes li b{font-weight:700}
+.comparacoes li span small{display:block;font-size:12px;color:var(--apagado);margin-top:2px}
 .equiv .def{font-size:12.5px;color:var(--apagado);margin:12px 0 0;line-height:1.45;max-width:60ch}
 .data-ref{display:flex;align-items:center;gap:8px;font-size:13px;color:var(--tinta-2)}
 .data-ref input{font:inherit;color:var(--tinta);border:1px solid var(--linha-forte);border-radius:3px;padding:4px 8px;background:#fff}
@@ -231,9 +232,6 @@ body.na-inicio #conteudo{padding-top:22px}
 .barra-data{display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin:14px 0 0;padding:10px 14px;background:#fff;border:1px solid var(--linha);border-left:3px solid var(--azul);border-radius:4px}
 .barra-data .data-ref b{color:var(--azul);font-size:13.5px;font-weight:700;margin-right:2px}
 .barra-data select{font:inherit;font-size:15px;font-weight:700;color:var(--azul);border:1px solid var(--linha-forte);border-radius:4px;padding:5px 8px;background:#fff;cursor:pointer}
-.barra-data .passo{border:1px solid var(--linha-forte);background:#fff;border-radius:4px;color:var(--azul);font-size:15px;line-height:1;padding:6px 10px;cursor:pointer}
-.barra-data .passo:hover:not(:disabled){background:var(--fundo);border-color:var(--azul)}
-.barra-data .passo:disabled{opacity:.3;cursor:default}
 .barra-data input[type=date]{font:inherit;font-size:15px;font-weight:700;color:var(--azul);border:1px solid var(--linha-forte);border-radius:4px;padding:4px 8px;background:#fff}
 .barra-data .hoje{border:1px solid var(--linha-forte);background:#fff;border-radius:4px;color:var(--azul);font:inherit;font-size:12.5px;padding:5px 10px;margin-left:4px;cursor:pointer}
 .barra-data .hoje:hover{background:var(--fundo);border-color:var(--azul)}
@@ -253,11 +251,7 @@ body.na-inicio #conteudo{padding-top:22px}
 .legenda .bola{margin-right:6px}
 td .dias{display:block;font-size:11.5px;color:var(--apagado)}
 td .dias.velho{color:#B45309;font-weight:700}
-.equiv .comp{display:grid;gap:10px;align-content:start;padding:22px 26px}
-.cmp{display:grid;grid-template-columns:1fr auto;gap:2px 12px;border-bottom:1px solid var(--linha);padding-bottom:8px}
-.cmp span{font-size:13px;color:var(--tinta-2)}
-.cmp b{font-size:20px;color:var(--ana);text-align:right}
-.cmp small{grid-column:1 / -1;font-size:12px;color:var(--apagado)}
+.equiv .comparacoes{padding:0 0 0 26px}
 th[data-ord]{cursor:pointer;user-select:none}
 th[data-ord]:hover{color:var(--ana)}
 th.ord-asc::after{content:' ▲';font-size:9px}
@@ -1877,29 +1871,19 @@ const legendaEscalaUF = () => `<div class="escala-uf"><b>Volume acumulado</b>` +
 
 function seletorData(id){
   return `<div class="barra-data"><label class="data-ref" for="${id}"><b>Data de referência</b></label>
-    <button class="passo" data-passo="-1" title="Um dia antes" aria-label="Um dia antes">‹</button>
     <input type="date" id="${id}" value="${dataRef}" min="${NEd.serie_min}" max="${NEd.serie_ate}" aria-label="Data de referência">
-    <button class="passo" data-passo="1" title="Um dia depois" aria-label="Um dia depois">›</button>
-    <button class="hoje" data-passo="0" title="Voltar para a última medição do módulo">última medição</button>
+    <button class="hoje" title="Voltar para a última medição do módulo">última medição</button>
     <span class="dica">Cada reservatório entra com a medição mais próxima desta data, até ${NEd.limiar_dias} dias antes ou depois. Qualquer data de ${dBR(NEd.serie_min)} a ${dBR(NEd.serie_ate)}.</span></div>`;
 }
 function ligarSeletor(id, aplicar){
   const ent = $("#"+id), pai = ent.closest(".barra-data");
-  const limites = () => {
-    $$(".passo", pai).forEach(b => {
-      const p = +b.dataset.passo;
-      b.disabled = p < 0 ? dataRef <= NEd.serie_min : dataRef >= NEd.serie_ate;
-    });
-  };
   const ir = iso => {
     if (iso < NEd.serie_min) iso = NEd.serie_min;
     if (iso > NEd.serie_ate) iso = NEd.serie_ate;
-    dataRef = iso; ent.value = iso; limites(); aplicar();
+    dataRef = iso; ent.value = iso; aplicar();
   };
   ent.onchange = () => ir(ent.value || NEd.data);
-  $$(".passo", pai).forEach(b => b.onclick = () => ir(isoDia(diaDe(dataRef) + (+b.dataset.passo))));
   $(".hoje", pai).onclick = () => ir(NEd.data);
-  limites();
 }
 
 // série {iso: valor} sobreposta por ano no mesmo calendário (usada no NE; a ficha tem a sua própria por ora)
@@ -2093,14 +2077,17 @@ function paginaNE(){
         </table></div>
       </div>
     </section>
-    <section class="cartao secao equiv" id="n-vol" aria-labelledby="t-n-vol">
-      <div class="lado">
-        <h2 id="t-n-vol"><small>2</small>Volume acumulado do Nordeste</h2>
-        <p class="sub" id="vol-sub"></p>
-        <div class="valor num" id="vol-valor"></div>
-        <p class="nota" id="vol-nota"></p>
+    <section class="cartao secao" id="n-vol" aria-labelledby="t-n-vol">
+      <h2 id="t-n-vol"><small>2</small>Volume acumulado do Nordeste</h2>
+      <p class="sub" id="vol-sub"></p>
+      <div class="equiv">
+        <div class="lado">
+          <div class="valor num" id="vol-valor"></div>
+          <div class="quando" id="vol-quando"></div>
+        </div>
+        <ul class="comparacoes" id="comp-ne"></ul>
       </div>
-      <div class="lado comp" id="comp-ne"></div>
+      <p class="nota" id="vol-nota"></p>
     </section>
     <section class="cartao secao" id="n-ano" aria-labelledby="t-n-ano">
       ${barraBaixar([["baixar-ne-ano", "PNG", "Baixar o gráfico como imagem"]])}
@@ -2165,16 +2152,17 @@ function paginaNE(){
 
     $("#vol-sub").textContent = `Soma dos ${fint(tot.com_dado)} reservatórios com medição na janela de ${NEd.limiar_dias} dias em torno de ${ref}.`;
     $("#vol-valor").innerHTML = `${fmt(tot.volume_pct,1)}<small>%</small>`;
+    $("#vol-quando").textContent = `volume acumulado em ${ref}`;
     $("#vol-nota").textContent = `${fint(tot.volume_hm3)} de ${fint(tot.capacidade_com_dado_hm3)} hm³ de capacidade equivalente · capacidade total do módulo ${fint(tot.capacidade_hm3)} hm³ · as comparações ao lado e os gráficos 3 e 4 vêm da série de volume equivalente do portal, que inclui reservatórios fora da janela`;
     const md = NEd.portal_por_data[coletada].mesmo_dia.NE, anos = Object.keys(md).map(Number).sort(), ano = +coletada.slice(0,4);
     const v0 = md[ano], vAnt = md[ano-1], v5 = md[ano-5];
     const dif = (a,b) => a==null||b==null ? "–" : `${a-b>=0?"+":"−"}${fmt(Math.abs(a-b),1)} p.p.`;
     const menor = anos.reduce((m,a) => md[a]<md[m] ? a : m, anos[0]);
     $("#comp-ne").innerHTML = `
-      <div class="cmp"><span>Mesmo dia de ${ano-1}</span><b class="num">${vAnt==null?"–":fmt(vAnt,1)+"%"}</b><small>${dif(v0,vAnt)}</small></div>
-      <div class="cmp"><span>Mesmo dia de ${ano-5}</span><b class="num">${v5==null?"–":fmt(v5,1)+"%"}</b><small>${dif(v0,v5)}</small></div>
-      <div class="cmp"><span>Menor valor da série (${anos[0]} a ${ano})</span><b class="num">${fmt(md[menor],1)}%</b><small>em ${menor}</small></div>
-      <div class="cmp"><span>Sem informação</span><b class="num">${fint(tot.sem_info)}</b><small>de ${fint(tot.n)} reservatórios</small></div>`;
+      <li><span>Mesmo dia de ${ano-1}<small>${dif(v0,vAnt)}</small></span><b class="num">${vAnt==null?"–":fmt(vAnt,1)+"%"}</b></li>
+      <li><span>Mesmo dia de ${ano-5}<small>${dif(v0,v5)}</small></span><b class="num">${v5==null?"–":fmt(v5,1)+"%"}</b></li>
+      <li><span>Menor valor da série<small>${anos[0]} a ${ano}, em ${menor}</small></span><b class="num">${fmt(md[menor],1)}%</b></li>
+      <li><span>Sem informação<small>de ${fint(tot.n)} reservatórios</small></span><b class="num">${fint(tot.sem_info)}</b></li>`;
 
     const anosSerie = [...new Set(Object.keys(NEd.serie.NE).map(k => +k.slice(0,4)))].sort();
     graficoCalendario($("#g-ne-ano"), NEd.serie.NE, {anos:anosSerie, anoAtual, dec:1, unidade:"%", pct:true, marcaDia:dataRef, rotulo:"Volume acumulado do Nordeste (%)"});
@@ -2189,8 +2177,7 @@ function paginaNE(){
     $("#nota-mapa").textContent = `${fint(lista.length - comCoord.length)} dos ${fint(lista.length)} reservatórios do módulo não têm coordenada no cadastro e não aparecem no mapa. Mapa-base e imagem de satélite vêm de serviços externos; onde a rede os bloqueia, ficam só os pontos e os contornos.`;
     $("#fontes-ne").innerHTML = `Fontes: ${esc(NEd.fontes.medicoes)}; ${esc(NEd.fontes.resumo)}; ${esc(NEd.fontes.equivalente)}; ${esc(NEd.fontes.coordenadas)}; ${esc(NEd.fontes.regra)}. ` +
       `Volume acumulado do módulo pelo serviço de volume equivalente do portal em ${dBR(coletada)}${coletada===dataRef ? "" : ", a data coletada mais próxima"}: ${tot.volume_pct_portal==null ? "–" : fmt(tot.volume_pct_portal,1)+"%"} (o portal soma também reservatórios fora da janela de ${NEd.limiar_dias} dias). ` +
-      `O protótipo traz ${NEd.datas.length} datas de referência, de ${NEd.passo_datas} em ${NEd.passo_datas} dias.` +
-      `<br>A data de referência é livre: a série de 12 meses de cada reservatório está embutida na página e a regra dos ${NEd.limiar_dias} dias é aplicada no navegador. ` +
+      `<br>A data de referência é livre, de ${dBR(NEd.serie_min)} a ${dBR(NEd.serie_ate)}: a série de 12 meses de cada reservatório está embutida na página e a regra dos ${NEd.limiar_dias} dias é aplicada no navegador. ` +
       `As seções 3 e 4 usam a série de volume equivalente do portal, consultada de ${NEd.passo_datas} em ${NEd.passo_datas} dias, e se encostam na data coletada mais próxima.` +
       `<br>Contagem: a lista de medições do portal devolve ${fint(CT.api_linhas)} linhas para o módulo, com CRISTALÂNDIA (BA) repetida quatro vezes (duas em Brumado e duas em Ituaçu, com capacidade, volume e data idênticos); ` +
       `esta página conta ${fint(CT.listados)}, sem as ${CT.descartadas} linhas repetidas. O resumo por estado do portal soma ${fint(CT.resumo_soma)} e a sua própria linha do Nordeste diz ${fint(CT.resumo_nordeste)}: ` +
