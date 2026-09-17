@@ -1,3 +1,6 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
 <meta charset="utf-8">
 <title>SAR · Sistema Interligado Nacional</title>
 <meta name="description" content="Protótipo navegável do módulo SIN do novo SAR: reservatório equivalente, mapa e lista das 22 bacias do ONS, e página da bacia do Grande.">
@@ -58,6 +61,35 @@ main{padding-block:26px 60px}
 .indice a{padding:5px 12px;border-radius:14px;font-size:13.5px;color:var(--ana);background:#E4EBF3;text-decoration:none}
 .indice a:hover{background:var(--ana);color:#fff}
 .secao{border-left:5px solid var(--ana-claro);padding:18px 22px 20px;scroll-margin-top:64px;position:relative}
+/* contexto e data dentro da faixa fixa de seções (desktop) */
+.indice .ctx{display:flex;align-items:center;gap:8px;font-size:12.5px;padding-right:12px;margin-right:4px;border-right:1px solid var(--linha-forte)}
+.indice .ctx a{color:var(--tinta-2);text-decoration:none;white-space:nowrap}
+.indice .ctx a:hover{color:var(--ana);text-decoration:underline}
+.indice .ctx b{color:var(--ana);white-space:nowrap}
+.indice .barra-data{margin:0 0 0 auto;padding:0;border:0;background:transparent;gap:6px}
+.indice .barra-data .dica{display:none}
+.indice .barra-data .data-ref b{font-size:12.5px;font-weight:400;color:var(--tinta-2)}
+.indice .barra-data input[type=date]{font-size:13.5px;padding:3px 6px}
+.indice .barra-data .hoje{font-size:11.5px;padding:3px 8px}
+@media (min-width:1024px){
+  body:not(.na-inicio) header.faixa{position:sticky;top:0;z-index:40}
+  body.rolado:not(.na-inicio) header.faixa{box-shadow:0 4px 12px rgba(34,38,46,.07)}
+  /* altura constante: se o cabeçalho encolhesse ao rolar, o documento saltaria 93 px e o scrollIntoView erraria */
+  body:not(.na-inicio) .topo{padding-block:0}
+  body:not(.na-inicio) .marca{padding-bottom:0;gap:12px}
+  body:not(.na-inicio) .logo svg{height:30px}
+  body:not(.na-inicio) .sistema{border-left:0;padding-left:0}
+  body:not(.na-inicio) .sistema b{font-size:17px}
+  body:not(.na-inicio) .sistema span,body:not(.na-inicio) .selo{display:none}
+  body:not(.na-inicio) .modulos button{padding:9px 12px;font-size:13.5px}
+  body:not(.na-inicio) .indice{top:var(--topo-h,44px)}
+  body:not(.na-inicio) .secao{scroll-margin-top:calc(var(--topo-h,44px) + 62px)}
+  body:not(.na-inicio) .leaflet-top{margin-top:0}
+}
+@media (max-width:1023px){
+  .indice .ctx{display:none}
+  .indice .barra-data{margin-left:0}
+}
 /* downloads: ação acessória, alinhada ao alto à direita da seção, com o peso de uma nota */
 .baixar{position:absolute;top:16px;right:20px;display:flex;align-items:center;gap:2px;z-index:2}
 .baixar button{all:unset;box-sizing:border-box;cursor:pointer;display:inline-flex;align-items:center;gap:5px;font:12.5px var(--sans);color:var(--apagado);padding:4px 8px;border-radius:3px}
@@ -363,6 +395,8 @@ footer b{color:var(--ana)}
 @media (prefers-reduced-motion:reduce){*{transition:none!important}}
 </style>
 
+</head>
+<body>
 <header class="faixa">
   <div class="wrap topo">
     <div class="marca">
@@ -2460,6 +2494,33 @@ function mapaResNE(host, ufs){
 }
 
 /* ============================================================ rotas */
+const DESKTOP = () => window.matchMedia("(min-width:1024px)").matches;
+
+/* Faixa fixa: leva para a barra de seções o contexto (nível abaixo do módulo) e o controle de data da página.
+   Só no desktop; no celular o controle fica no lugar original, abaixo do título. */
+function montarFaixa(){
+  const ind = $(".indice");
+  if (!ind) return;
+  const barra = $(".barra-data");
+  if (!DESKTOP()){
+    if (barra && barra.parentElement === ind) $("#titulo-pag").append(barra);
+    const c = $(".indice .ctx"); if (c) c.remove();
+    return;
+  }
+  const trilha = $("#titulo-pag .trilha");
+  if (trilha && !$(".indice .ctx")){
+    const elos = $$("a", trilha), atual = (trilha.lastChild.textContent || "").trim();
+    if (elos.length > 1 && atual){                       // há nível abaixo do módulo (estado, bacia, ficha)
+      const pai = elos[elos.length-1];
+      const ctx = document.createElement("span");
+      ctx.className = "ctx";
+      ctx.innerHTML = `<a href="${pai.getAttribute("href")}" title="Voltar para ${esc(pai.textContent)}">‹ ${esc(pai.textContent)}</a><b>${esc(atual)}</b>`;
+      ind.prepend(ctx);
+    }
+  }
+  if (barra && barra.parentElement !== ind) ind.append(barra);
+}
+
 function rota(){
   const h = decodeURIComponent(location.hash.slice(1));
   if (h === "bacia/GRANDE") paginaGrande(); else if (h === "ficha/FURNAS") paginaFicha();
@@ -2469,7 +2530,19 @@ function rota(){
   $$(".modulos button").forEach(b => { if (b.dataset.rota === mod) b.setAttribute("aria-current","page"); else b.removeAttribute("aria-current"); });
   document.body.classList.toggle("na-inicio", mod === "inicio");
   window.scrollTo(0,0);
+  document.body.classList.remove("rolado");
+  montarFaixa();
 }
+function mediTopo(){
+  const hd = $("header.faixa");
+  if (hd && DESKTOP()) document.body.style.setProperty("--topo-h", Math.round(hd.getBoundingClientRect().height) + "px");
+  else document.body.style.removeProperty("--topo-h");
+}
+window.addEventListener("scroll", () => {
+  document.body.classList.toggle("rolado", window.scrollY > 8);
+  mediTopo();
+}, {passive:true});
+window.addEventListener("resize", () => { montarFaixa(); mediTopo(); });
 $$("[data-rota]").forEach(b => b.onclick = () => { location.hash = b.dataset.rota; });
 $("#rodape-fontes").textContent = `Fontes: ${D.fontes.medicoes}; ${D.fontes.equivalente}; ${D.fontes.cadastro}; ${D.fontes.contornos}.`;
 window.addEventListener("hashchange", rota);
@@ -2477,3 +2550,5 @@ let rz; window.addEventListener("resize", () => { clearTimeout(rz); rz = setTime
 rota();
 })();
 </script>
+</body>
+</html>
