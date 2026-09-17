@@ -264,6 +264,7 @@ h1 .simb{margin-right:10px;vertical-align:-2px}
 #mapa-grande{height:560px;border:1px solid var(--linha);border-radius:4px;position:relative;z-index:0;isolation:isolate}
 .rot-usina span{font:700 12px/1 var(--narrow);color:#283377;white-space:nowrap;text-shadow:0 0 3px #fff,0 0 3px #fff,0 0 3px #fff}
 #mapa-grande.sat .rot-usina span{color:#fff;text-shadow:0 0 3px #000,0 0 4px #000,0 1px 2px #000}
+.botoes{display:flex;flex-wrap:wrap;gap:8px}
 .merge-opcoes{margin:2px 0 4px 22px;display:flex;gap:10px;font-size:12.5px;color:var(--tinta-2)}
 .merge-opcoes label{display:inline-flex;align-items:center;gap:4px;white-space:nowrap}
 .legenda-mapa{background:#fff;padding:8px 10px;border-radius:4px;font:12px var(--sans);line-height:1.6;box-shadow:0 1px 4px rgba(0,0,0,.2);max-width:240px}
@@ -550,6 +551,61 @@ function simbolo(tipo, tam=14, cor){
 }
 function toast(msg){ const t = document.createElement("div"); t.className = "toast"; t.setAttribute("role","status"); t.textContent = msg; document.body.append(t); setTimeout(() => t.remove(), 3400); }
 $$("[data-fora]").forEach(b => b.onclick = () => toast(`${b.dataset.fora}: fora desta rodada do protótipo. A estrutura desse módulo ainda vai ser definida.`));
+
+/* ============================================================ exportação: PNG dos gráficos e do diagrama, PDF das tabelas */
+const CDN_JSPDF = "https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js";
+const CDN_AUTOTABLE = "https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js";
+const RODAPE = "SAR · protótipo para discussão interna. Não é o sistema em produção.";
+function carregarScript(src){
+  return new Promise((ok, erro) => {
+    if ([...document.scripts].some(s => s.src===src)) return ok();
+    const s = document.createElement("script"); s.src = src; s.onload = () => ok(); s.onerror = () => erro(new Error(src)); document.head.append(s);
+  });
+}
+// o SVG clonado perde o CSS da página: as regras que importam vão embutidas
+function imagemDeSVG(svg){
+  const c = svg.cloneNode(true), vb = svg.viewBox.baseVal;
+  const w = vb && vb.width ? vb.width : svg.clientWidth, h = vb && vb.height ? vb.height : svg.clientHeight;
+  c.setAttribute("xmlns", NS); c.setAttribute("width", w); c.setAttribute("height", h);
+  const est = document.createElementNS(NS, "style");
+  est.textContent = "text{font-family:Arial,Helvetica,sans-serif}.eixo text{fill:#6F7582;font-size:11.5px}.no-diag text{font-family:Arial,Helvetica,sans-serif}";
+  c.prepend(est);
+  const url = "data:image/svg+xml;charset=utf-8," + encodeURIComponent(new XMLSerializer().serializeToString(c));
+  return new Promise((ok, erro) => { const im = new Image(); im.onload = () => ok(im); im.onerror = () => erro(new Error("svg")); im.src = url; });
+}
+async function baixarPNG(svgs, nome, titulo){
+  const lista = svgs.filter(Boolean);
+  if (!lista.length){ toast("Nada para exportar nesta seção."); return; }
+  const larg = lista.map(s => { const vb = s.viewBox.baseVal; return vb && vb.width ? vb.width : s.clientWidth; });
+  const W = Math.max(...larg);
+  const alt = lista.map((s, i) => { const vb = s.viewBox.baseVal; return (vb && vb.height ? vb.height : s.clientHeight) * W / larg[i]; });
+  const cab = titulo ? 38 : 8, rod = 24, H = cab + alt.reduce((a, b) => a + b, 0) + rod, k = 2;
+  const cv = document.createElement("canvas"); cv.width = Math.round(W*k); cv.height = Math.round(H*k);
+  const ctx = cv.getContext("2d"); ctx.scale(k, k);
+  ctx.fillStyle = "#fff"; ctx.fillRect(0, 0, W, H);
+  if (titulo){ ctx.fillStyle = "#283377"; ctx.font = "bold 16px Arial"; ctx.fillText(titulo, 14, 25); }
+  let y = cab;
+  for (let i=0;i<lista.length;i++){ const im = await imagemDeSVG(lista[i]); ctx.drawImage(im, 0, y, W, alt[i]); y += alt[i]; }
+  ctx.fillStyle = "#6F7582"; ctx.font = "11px Arial"; ctx.fillText(RODAPE, 14, H - 8);
+  cv.toBlob(b => { baixarArquivo(b, nome); toast("Imagem gerada. (Na página publicada no claude.ai o download é bloqueado; abra o arquivo local.)"); }, "image/png");
+}
+async function baixarPDF(titulo, sub, colunas, linhas, nome, alinhaDireita){
+  try { await carregarScript(CDN_JSPDF); await carregarScript(CDN_AUTOTABLE); }
+  catch (e){ toast("Não foi possível carregar a biblioteca de PDF (rede bloqueada neste ambiente)."); return; }
+  const doc = new window.jspdf.jsPDF({orientation:"landscape", unit:"pt", format:"a4"});
+  const larg = doc.internal.pageSize.getWidth(), altura = doc.internal.pageSize.getHeight();
+  doc.setFont("helvetica", "bold"); doc.setFontSize(14); doc.setTextColor(40, 51, 119); doc.text(titulo, 40, 46);
+  doc.setFont("helvetica", "normal"); doc.setFontSize(9); doc.setTextColor(75, 82, 96);
+  doc.text(doc.splitTextToSize(sub, larg - 80), 40, 62);
+  const colStyles = {};
+  (alinhaDireita||[]).forEach(i => colStyles[i] = {halign:"right"});
+  doc.autoTable({startY: 86, head:[colunas], body: linhas, columnStyles: colStyles,
+    styles:{font:"helvetica", fontSize:9, cellPadding:4, lineColor:[226,228,232], lineWidth:.5},
+    headStyles:{fillColor:[40, 51, 119], textColor:255, halign:"left"}, alternateRowStyles:{fillColor:[243, 244, 246]}, margin:{left:40, right:40}});
+  doc.setFontSize(8); doc.setTextColor(111, 117, 130); doc.text(RODAPE, 40, altura - 22);
+  doc.save(nome);
+  toast("PDF gerado. (Na página publicada no claude.ai o download é bloqueado; abra o arquivo local.)");
+}
 
 /* ============================================================ gráfico do equivalente */
 function graficoEquivalente(host){
@@ -878,7 +934,7 @@ function paginaGrande(){
     <section class="cartao secao tabela-bacia" id="g-tab" aria-labelledby="t-tab-g">
       <h2 id="t-tab-g"><small>2</small>Usinas em ${dBR(D.data)}</h2>
       <p class="sub">De montante para jusante. Clique numa usina para abrir a ficha. O minigráfico mostra os 30 dias até o dia escolhido, da variável selecionada, a mesma em todas as linhas.</p>
-      <div class="linha-mapa"><div class="ferramentas"><label>Dia <input type="date" id="dia-bacia" value="${D.data}" min="${G.res[0].serie[0].data}" max="${D.data}"></label><span class="nota" id="aviso-dia"></span></div><button class="acao sec" type="button" id="baixar-csv">Baixar CSV da tabela</button></div>
+      <div class="linha-mapa"><div class="ferramentas"><label>Dia <input type="date" id="dia-bacia" value="${D.data}" min="${G.res[0].serie[0].data}" max="${D.data}"></label><span class="nota" id="aviso-dia"></span></div><span class="botoes"><button class="acao sec" type="button" id="baixar-csv">Baixar CSV</button><button class="acao sec" type="button" id="baixar-pdf">Baixar PDF</button></span></div>
       <div class="tab-box"><table>
         <thead><tr><th>Usina</th><th class="r">Afluente</th><th class="r">Defluente</th><th class="r">Turbinada</th><th class="r">Vertida</th><th class="r">Nível</th><th class="r">Volume útil</th>
             <th class="mini-th"><label>Últimos 30 dias <select id="var-mini" aria-label="Variável do minigráfico"><option value="afl">afluente</option><option value="defl">defluente</option><option value="turb">turbinada</option><option value="vert">vertida</option><option value="cota" selected>nível</option><option value="vu">volume útil</option></select></label></th></tr>
@@ -892,6 +948,7 @@ function paginaGrande(){
         <span>${simbolo("res",14)}com reservatório: ponta voltada para montante, volume útil abaixo</span>
         <span>${simbolo("fio",14)}a fio d'água</span><span>número acima: defluente do dia (m³/s)</span>
       </div>
+      <div class="linha-mapa" style="justify-content:flex-end"><button class="acao sec" type="button" id="baixar-diag">Baixar imagem (PNG)</button></div>
       <div class="cx" id="diag-grande"></div>
     </section>`;
   $$(".indice a").forEach(a => a.onclick = e => { e.preventDefault(); document.getElementById(a.dataset.alvo).scrollIntoView({behavior:"smooth", block:"start"}); });
@@ -910,6 +967,12 @@ function paginaGrande(){
   $("#dia-bacia").addEventListener("change", e => { const v = e.target.value; if (v && v <= D.data && v >= e.target.min) render(v); });
   $("#var-mini").addEventListener("change", e => minigraficos(doDia, e.target.value));
   $("#baixar-csv").onclick = () => baixarCSV(doDia);
+  $("#baixar-pdf").onclick = () => baixarPDF(`Bacia do Grande · usinas em ${dBR(doDia[0].dia)}`,
+    `Base diária, último dia fechado escolhido pelo usuário. Fontes: ${D.fontes.medicoes}; ${D.fontes.sar0}.`,
+    ["Usina", "Tipo", "Afluente (m³/s)", "Defluente (m³/s)", "Turbinada (m³/s)", "Vertida (m³/s)", "Nível (m)", "Volume útil (%)"],
+    doDia.map(r => [caso(r.nome), TIPO[r.tipo], fint(r.afl), fint(r.defl), fint(r.turb), fint(r.vert), fmt(r.cota, 2), r.tipo==="fio" ? "–" : fmt(r.vu, 1)]),
+    `sar_grande_${doDia[0].dia}.pdf`, [2, 3, 4, 5, 6, 7]);
+  $("#baixar-diag").onclick = () => baixarPNG([$("#diag-grande svg")], `sar_grande_cascata_${doDia[0].dia}.png`, `Bacia do Grande · cascata · ${dBR(doDia[0].dia)}`);
   $("#baixar-kmz-bacia").onclick = () => baixarKMZ(doDia);
   render(D.data);
 }
@@ -1076,6 +1139,7 @@ function diagramaGrande(host, lista){
   const xPd = k => xJ + 60 + (pardo.length-1-k)*120;
   svg.append(svgEl("path",{d:`M${xPd(0)+70} ${yP} H${xJ+26} Q${xJ} ${yP} ${xJ} ${yP-26} V${yR}`, stroke:"#C3CFDD","stroke-width":5,"stroke-linecap":"round",fill:"none"}));
   t(W-10, yR-46, "rio Grande", {"text-anchor":"end", fill:"#283377","font-size":13,"font-style":"italic"});
+  t(8, 18, `Dados de ${dBR(lista[0].dia || D.data)} · base diária`, {"text-anchor":"start", fill:"#6E788C","font-size":12.5});
   t(8, yR-14, "rio Paraná", {"text-anchor":"start", fill:"#6E788C","font-size":12.5,"font-style":"italic"});
   t(xPd(0)+74, yP+4, "rio Pardo", {"text-anchor":"start", fill:"#283377","font-size":13,"font-style":"italic"});
   for (let k=0;k<principal.length-1;k++){ // setas do sentido do escoamento
@@ -1134,8 +1198,9 @@ function paginaFicha(){
       <a href="#ficha/FURNAS" data-alvo="f-sit">Situação</a><a href="#ficha/FURNAS" data-alvo="f-graf">Gráficos</a><a href="#ficha/FURNAS" data-alvo="f-dia">Mesmo dia em outros anos</a><a href="#ficha/FURNAS" data-alvo="f-ano">Ano contra anos anteriores</a>
     </nav>
     <section class="cartao secao" id="f-sit" aria-labelledby="t-sit">
-      <h2 id="t-sit"><small>1</small>Situação em ${dBR(ult.data)}</h2>
-      <p class="sub">Último dia fechado na base diária. Ao lado, a usina e as vizinhas da cascata do Grande.</p>
+      <h2 id="t-sit"><small>1</small>Situação em <span id="dia-sit-txt">${dBR(ult.data)}</span></h2>
+      <p class="sub">Base diária. O padrão é o último dia fechado; escolha outro dia para ver a situação daquela data. Ao lado, a usina e as vizinhas da cascata do Grande.</p>
+      <div class="linha-mapa"><div class="ferramentas"><label>Dia <input type="date" id="dia-sit" value="${ult.data}" min="${DI[0].data}" max="${ult.data}"></label><span class="nota" id="aviso-sit"></span></div></div>
       <div class="sit-grid">
         <div class="valores" id="valores-ficha"></div>
         <div id="mapa-ficha"></div>
@@ -1153,39 +1218,54 @@ function paginaFicha(){
       <p class="nota aviso-afl" id="aviso-afl" hidden><b>Atenção:</b> na base horária a afluência é calculada por balanço hídrico (variação de volume mais defluência) e oscila, com valores negativos e picos que não são vazão real. Use a base diária para afluência.</p>
       <div class="graf" id="g-vazoes"></div>
       <div class="graf" id="g-segundo"></div>
-      <div class="linha-mapa" style="margin-top:10px"><p class="nota" id="resumo-graf" style="margin:0"></p><button class="acao sec" type="button" id="baixar-serie">Baixar série (CSV)</button></div>
+      <div class="linha-mapa" style="margin-top:10px"><p class="nota" id="resumo-graf" style="margin:0"></p><span class="botoes"><button class="acao sec" type="button" id="baixar-serie">Baixar série (CSV)</button><button class="acao sec" type="button" id="baixar-graf-png">Baixar imagem (PNG)</button></span></div>
     </section>
     <section class="cartao secao" id="f-dia" aria-labelledby="t-dia">
       <h2 id="t-dia"><small>3</small>Mesmo dia em outros anos</h2>
       <p class="sub">O valor de um mesmo dia do calendário em cada ano da série diária. Escolha o dia e a variável.</p>
       <div class="controles"><fieldset><legend>Dia</legend><input type="date" id="dia-ref-f" value="${ult.data}" min="${DI[0].data}" max="${ult.data}"></fieldset>
         <fieldset><legend>Variável</legend><select id="var-dia">${["vu","cota","afl","defl"].map(k => `<option value="${k}">${VARS[k].r}</option>`).join("")}</select></fieldset></div>
+      <div class="linha-mapa" style="justify-content:flex-end;margin-top:-4px"><button class="acao sec" type="button" id="baixar-dia-png">Baixar imagem (PNG)</button></div>
       <div class="graf" id="g-dia"></div>
     </section>
     <section class="cartao secao" id="f-ano" aria-labelledby="t-ano">
       <h2 id="t-ano"><small>4</small>Ano contra anos anteriores</h2>
       <p class="sub">A série diária de cada ano sobreposta no mesmo calendário. O ano corrente fica em destaque; clique nos anos para incluir ou tirar.</p>
-      <div class="controles"><fieldset><legend>Variável</legend><select id="var-ano">${["vu","cota","afl","defl"].map(k => `<option value="${k}">${VARS[k].r}</option>`).join("")}</select></fieldset>
+      <div class="controles"><fieldset><legend>Variável</legend><select id="var-ano">${["vu","cota"].map(k => `<option value="${k}">${VARS[k].r}${k==="vu" ? " (%)" : " (m)"}</option>`).join("")}</select></fieldset>
         <fieldset class="anos"><legend>Anos</legend><span id="anos-chips"></span></fieldset></div>
+      <div class="linha-mapa" style="justify-content:flex-end;margin-top:-4px"><button class="acao sec" type="button" id="baixar-ano-png">Baixar imagem (PNG)</button></div>
       <div class="graf" id="g-ano"></div>
     </section>`;
   $$(".indice a").forEach(a => a.onclick = e => { e.preventDefault(); document.getElementById(a.dataset.alvo).scrollIntoView({behavior:"smooth", block:"start"}); });
 
-  // 1. situação
+  // 1. situação: dia escolhido pelo usuário (padrão, último dia fechado)
   const em = iso => DI.find(o => o.data===iso);
-  const dAtras = n => isoDe(ult.t - n*864e5);
-  const a7 = em(dAtras(7)), a30 = em(dAtras(30)), anoPassado = em(`${+ult.data.slice(0,4)-1}${ult.data.slice(4)}`);
-  const delta = (k, o, dec) => o && o[k]!=null && ult[k]!=null ? `${ult[k]-o[k] >= 0 ? "+" : "−"}${fmt(Math.abs(ult[k]-o[k]), dec)}` : "–";
-  const media = (k, n) => { const v = DI.slice(-n).map(o => o[k]).filter(x => x!=null); return v.length ? v.reduce((a,b) => a+b, 0)/v.length : null; };
-  $("#valores-ficha").innerHTML = `
-    <div class="v principal"><div class="r">Volume útil</div><div class="n num">${fmt(ult.vu,1)}<small>%</small></div>
-      <div class="c"><span>há 7 dias <b class="num">${delta("vu", a7, 1)}</b></span><span>há 30 dias <b class="num">${delta("vu", a30, 1)}</b></span><span>mesmo dia de ${+ult.data.slice(0,4)-1} <b class="num">${anoPassado ? fmt(anoPassado.vu,1)+"%" : "–"}</b></span></div></div>
-    <div class="v"><div class="r">Nível</div><div class="n num">${fmt(ult.cota,2)}<small>m</small></div><div class="c"><span>há 7 dias <b class="num">${delta("cota", a7, 2)} m</b></span></div></div>
-    <div class="v"><div class="r">Afluente</div><div class="n num">${fint(ult.afl)}<small>m³/s</small></div><div class="c"><span>média de 7 dias <b class="num">${fint(media("afl",7))}</b></span></div></div>
-    <div class="v"><div class="r">Defluente</div><div class="n num">${fint(ult.defl)}<small>m³/s</small></div><div class="c"><span>média de 7 dias <b class="num">${fint(media("defl",7))}</b></span></div></div>
-    <div class="v"><div class="r">Turbinada</div><div class="n num">${fint(ult.turb)}<small>m³/s</small></div><div class="c"><span>média de 7 dias <b class="num">${fint(media("turb",7))}</b></span></div></div>
-    <div class="v"><div class="r">Vertida</div><div class="n num">${fint(ult.vert)}<small>m³/s</small></div><div class="c"><span>média de 7 dias <b class="num">${fint(media("vert",7))}</b></span></div></div>`;
-  mapaFicha($("#mapa-ficha"), F);
+  const mapaF = mapaFicha($("#mapa-ficha"), F);
+  const SER_BACIA = (D.grande.res[0].serie || []).map(p => p.data);
+  function situacao(dia){
+    const o = em(dia);
+    $("#dia-sit-txt").textContent = dBR(dia);
+    if (!o){ $("#valores-ficha").innerHTML = `<p class="nota">Sem registro na base diária em ${dBR(dia)}.</p>`; $("#aviso-sit").textContent = ""; return; }
+    const i0 = DI.indexOf(o);
+    const atras = n => em(isoDe(o.t - n*864e5));
+    const a7 = atras(7), a30 = atras(30), anoPassado = em(`${+dia.slice(0,4)-1}${dia.slice(4)}`);
+    const delta = (k, p, dec) => p && p[k]!=null && o[k]!=null ? `${o[k]-p[k] >= 0 ? "+" : "−"}${fmt(Math.abs(o[k]-p[k]), dec)}` : "–";
+    const media = (k, n) => { const v = DI.slice(Math.max(0, i0-n+1), i0+1).map(x => x[k]).filter(x => x!=null); return v.length ? v.reduce((a,b) => a+b, 0)/v.length : null; };
+    $("#valores-ficha").innerHTML = `
+      <div class="v principal"><div class="r">Volume útil</div><div class="n num">${fmt(o.vu,1)}<small>%</small></div>
+        <div class="c"><span>há 7 dias <b class="num">${delta("vu", a7, 1)}</b></span><span>há 30 dias <b class="num">${delta("vu", a30, 1)}</b></span><span>mesmo dia de ${+dia.slice(0,4)-1} <b class="num">${anoPassado && anoPassado.vu!=null ? fmt(anoPassado.vu,1)+"%" : "–"}</b></span></div></div>
+      <div class="v"><div class="r">Nível</div><div class="n num">${fmt(o.cota,2)}<small>m</small></div><div class="c"><span>há 7 dias <b class="num">${delta("cota", a7, 2)} m</b></span></div></div>
+      <div class="v"><div class="r">Afluente</div><div class="n num">${fint(o.afl)}<small>m³/s</small></div><div class="c"><span>média de 7 dias <b class="num">${fint(media("afl",7))}</b></span></div></div>
+      <div class="v"><div class="r">Defluente</div><div class="n num">${fint(o.defl)}<small>m³/s</small></div><div class="c"><span>média de 7 dias <b class="num">${fint(media("defl",7))}</b></span></div></div>
+      <div class="v"><div class="r">Turbinada</div><div class="n num">${fint(o.turb)}<small>m³/s</small></div><div class="c"><span>média de 7 dias <b class="num">${fint(media("turb",7))}</b></span></div></div>
+      <div class="v"><div class="r">Vertida</div><div class="n num">${fint(o.vert)}<small>m³/s</small></div><div class="c"><span>média de 7 dias <b class="num">${fint(media("vert",7))}</b></span></div></div>`;
+    // o mapa da cascata só tem série das vizinhas no período coletado para a bacia
+    const temBacia = SER_BACIA.includes(dia);
+    mapaF.atualizar(temBacia ? dia : D.data);
+    $("#aviso-sit").textContent = temBacia ? "" : `No mapa, as vizinhas seguem em ${dBR(D.data)}: no protótipo a série da bacia vai de ${dBR(SER_BACIA[0])} a ${dBR(D.data)}.`;
+  }
+  $("#dia-sit").addEventListener("change", e => { const v = e.target.value; if (v && v >= e.target.min && v <= e.target.max) situacao(v); });
+  situacao(ult.data);
 
   // 2. gráficos
   fichaEstado = {DI, HO, ult};
@@ -1208,10 +1288,15 @@ function paginaFicha(){
   $$("input[name=vaz], input[name=seg]").forEach(i => i.onchange = desenharGraficos);
   $("#g-de").onchange = $("#g-ate").onchange = () => { $$("#presets .preset").forEach(x => x.classList.remove("ativo")); desenharGraficos(); };
   $("#baixar-serie").onclick = baixarSerie;
+  $("#baixar-graf-png").onclick = () => baixarPNG([$("#g-vazoes svg"), $("#g-segundo svg")],
+    `sar_furnas_graficos_${$("#g-de").value}_${$("#g-ate").value}.png`,
+    `Furnas · ${$("input[name=base]:checked").value==="dia" ? "base diária" : "base horária"} · ${dBR($("#g-de").value)} a ${dBR($("#g-ate").value)}`);
   montarPresets();
 
   // 3. mesmo dia
   $("#dia-ref-f").onchange = $("#var-dia").onchange = graficoMesmoDia;
+  $("#baixar-dia-png").onclick = () => baixarPNG([$("#g-dia svg")], `sar_furnas_mesmo_dia_${$("#dia-ref-f").value}.png`,
+    `Furnas · ${VARS[$("#var-dia").value].r} em ${dBR($("#dia-ref-f").value).slice(0,5)} de cada ano`);
   graficoMesmoDia();
 
   // 4. ano contra anos
@@ -1221,6 +1306,7 @@ function paginaFicha(){
   $("#anos-chips").innerHTML = anos.map(a => `<button type="button" class="chip-ano${fichaEstado.anosSel.has(a) ? " on" : ""}" data-a="${a}">${a}</button>`).join("");
   $$("#anos-chips .chip-ano").forEach(b => b.onclick = () => { const a = +b.dataset.a; fichaEstado.anosSel.has(a) ? fichaEstado.anosSel.delete(a) : fichaEstado.anosSel.add(a); b.classList.toggle("on"); graficoAnos(); });
   $("#var-ano").onchange = graficoAnos;
+  $("#baixar-ano-png").onclick = () => baixarPNG([$("#g-ano svg")], `sar_furnas_ano_contra_anos.png`, `Furnas · ${VARS[$("#var-ano").value].r} ao longo do ano`);
   graficoAnos();
 }
 function redesenharFicha(){ if (!fichaEstado) return; desenharGraficos(); graficoMesmoDia(); graficoAnos(); }
@@ -1395,18 +1481,29 @@ function mapaFicha(host, F){
   const rios = L.geoJSON({type:"Feature", geometry:{type:"MultiLineString", coordinates:D.geo.rios_grande}}, {style:{color:"#5F8FC0", weight:1.4, opacity:.95}, interactive:false}).addTo(mapa);
   mapa.on("baselayerchange", e => { const sat = e.name==="Satélite"; bacia.setStyle({color: sat ? "#fff" : "#283377"}); rios.setStyle({color: sat ? "#8FC4F2" : "#5F8FC0"}); host.classList.toggle("sat", sat); });
   mapa.fitBounds(bacia.getBounds(), {padding:[6,6]});
+  const marc = {};
   D.grande.res.forEach(r => {
     const eu = r.nome===F.nome;
     const ic = L.divIcon({className:"usina", iconSize:[18,16], iconAnchor:[9,8], html: r.tipo==="fio"
       ? `<svg width="12" height="12" viewBox="0 0 16 16"><circle cx="8" cy="8" r="6.5" fill="${eu ? "#FFFFFF" : "#4A7FB0"}" stroke="#fff" stroke-width="1.4"/></svg>`
       : `<svg width="${eu ? 26 : 16}" height="${eu ? 24 : 14}" viewBox="0 0 18 16"><path d="M9 1 L17 15 L1 15 Z" fill="${eu ? "#283377" : "#4A7FB0"}" stroke="#fff" stroke-width="${eu ? 1.8 : 1.2}"/></svg>`});
     const m = L.marker([r.lat, r.lon], {icon: ic, zIndexOffset: eu ? 1000 : 0}).addTo(mapa);
-    m.bindTooltip(`<div class="pop"><b>${esc(caso(r.nome))}</b><div class="l"><span>${TIPO[r.tipo]}</span></div>${r.tipo!=="fio" ? `<div class="l"><span>Volume útil</span><span class="num">${fmt(r.vu,1)}%</span></div>` : ""}<div class="l"><span>Nível</span><span class="num">${fmt(r.cota,2)} m</span></div><div class="l"><span>Defluente</span><span class="num">${fint(r.defl)} m³/s</span></div></div>`, {direction:"top", offset:[0,-8], opacity:1});
-    if (!eu){ m.on("click", () => abrirFicha(r)); }
+    m.bindTooltip("", {direction:"top", offset:[0,-8], opacity:1});
+    if (!eu) m.on("click", () => abrirFicha(r));
     L.marker([r.lat, r.lon], {icon: L.divIcon({className:"rot-usina" + (eu ? " eu" : ""), iconAnchor:[eu ? -14 : -8, 8], html:`<span>${esc(caso(r.nome))}</span>`}), interactive:false, zIndexOffset:-100}).addTo(mapa);
+    marc[r.nome] = m;
   });
   L.control.layers({"Mapa": claro, "Satélite": satelite}, null, {collapsed:true}).addTo(mapa);
   L.control.zoom({position:"bottomright"}).addTo(mapa);
+  return {atualizar(dia){
+    D.grande.res.forEach(x => {
+      const r = comDia(x, dia);
+      marc[r.nome].setTooltipContent(`<div class="pop"><b>${esc(caso(r.nome))}</b><div class="l"><span>${TIPO[r.tipo]}</span></div>` +
+        (r.tipo!=="fio" ? `<div class="l"><span>Volume útil</span><span class="num">${fmt(r.vu,1)}%</span></div>` : "") +
+        `<div class="l"><span>Nível</span><span class="num">${fmt(r.cota,2)} m</span></div><div class="l"><span>Defluente</span><span class="num">${fint(r.defl)} m³/s</span></div>` +
+        `<div class="l"><span>Data do dado</span><span>${dBR(dia)}</span></div></div>`);
+    });
+  }};
 }
 
 /* ============================================================ página inicial */
