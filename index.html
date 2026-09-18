@@ -1224,7 +1224,8 @@ function paginaGrande(){
         <p class="lead">Rio Grande e afluente Pardo, de Camargos a Água Vermelha, na divisa entre Minas Gerais e São Paulo.</p>
         <div class="carimbo"><span>Dados do dia <b id="dia-carimbo">${dBR(D.data)}</b></span><span>Base diária</span><span><b>${nRes}</b> com reservatório · <b>${nFio}</b> a fio d'água</span></div>
       </div>
-    </div>`;
+    </div>
+    <div class="barra-data"><label class="data-ref" for="dia-bacia"><b>Data de referência</b></label><input type="date" id="dia-bacia" value="${D.data}" min="${G.res[0].serie[0].data}" max="${D.data}" aria-label="Data de referência"><button class="hoje" id="dia-bacia-hoje" title="Voltar para o último dia fechado">último dia</button><span class="dica">Base diária. Mapa, tabela e cascata mostram o dia escolhido.</span></div>`;
   const main = $("#conteudo");
   main.innerHTML = `
     <nav class="indice" aria-label="Seções da página">
@@ -1241,7 +1242,7 @@ function paginaGrande(){
       ${barraBaixar([["baixar-csv", "CSV", "Baixar a tabela do dia em CSV"], ["baixar-pdf", "PDF", "Baixar a tabela do dia em PDF"]])}
       <h2 id="t-tab-g"><small>2</small>Usinas em ${dBR(D.data)}</h2>
       <p class="sub">De montante para jusante. O minigráfico mostra os 30 dias até o dia escolhido, da variável selecionada, a mesma em todas as linhas.<span class="dica">Clique numa usina para abrir a ficha.</span></p>
-      <div class="linha-mapa"><div class="ferramentas"><label>Dia <input type="date" id="dia-bacia" value="${D.data}" min="${G.res[0].serie[0].data}" max="${D.data}"></label><span class="nota" id="aviso-dia"></span></div></div>
+      <p class="nota" id="aviso-dia" style="margin:0 0 8px"></p>
       <div class="tab-box"><table>
         <thead><tr><th>Usina</th><th class="r">Afluente</th><th class="r">Defluente</th><th class="r">Turbinada</th><th class="r">Vertida</th><th class="r">Nível</th><th class="r">Volume útil</th>
             <th class="mini-th"><label>Últimos 30 dias <select id="var-mini" aria-label="Variável do minigráfico"><option value="afl">afluente</option><option value="defl">defluente</option><option value="turb">turbinada</option><option value="vert">vertida</option><option value="cota" selected>nível</option><option value="vu">volume útil</option></select></label></th></tr>
@@ -1272,6 +1273,7 @@ function paginaGrande(){
     $("#aviso-dia").textContent = semDado ? `${semDado} usina(s) sem dado em ${dBR(dia)}.` : "";
   }
   $("#dia-bacia").addEventListener("change", e => { const v = e.target.value; if (v && v <= D.data && v >= e.target.min) render(v); });
+  $("#dia-bacia-hoje").onclick = () => { const e = $("#dia-bacia"); e.value = D.data; e.dispatchEvent(new Event("change")); };
   $("#var-mini").addEventListener("change", e => minigraficos(doDia, e.target.value));
   $("#baixar-csv").onclick = () => baixarCSV(doDia);
   $("#baixar-pdf").onclick = () => pdfTabelaBacia(doDia, $("#var-mini").value, $("#var-mini").selectedOptions[0].textContent.trim());
@@ -1551,15 +1553,16 @@ function paginaFicha(){
         <p class="lead">Usina com reservatório no rio ${F.rio}, bacia do Grande, Minas Gerais.</p>
         <div class="carimbo"><span>Código SAR <b>${F.codigo}</b></span><span>Último dia fechado <b>${dBR(ult.data)}</b></span><span>Base diária desde <b>${dBR(DI[0].data)}</b></span><span>Base horária desde <b>${fHora(HO[0].t)}</b>, última <b>${fHora(HO[HO.length-1].t)}</b></span></div>
       </div>
-    </div>`;
+    </div>
+    <div class="barra-data"><label class="data-ref" for="dia-sit"><b>Data de referência</b></label><input type="date" id="dia-sit" value="${ult.data}" min="${DI[0].data}" max="${ult.data}" aria-label="Data de referência"><button class="hoje" id="dia-sit-hoje" title="Voltar para o último dia fechado">último dia</button><span class="dica">Base diária. Situação e mesmo dia em outros anos seguem esta data.</span></div>`;
   $("#conteudo").innerHTML = `
     <nav class="indice" aria-label="Seções da página">
       <a href="#ficha/FURNAS" data-alvo="f-sit">Situação</a><a href="#ficha/FURNAS" data-alvo="f-graf">Gráficos</a><a href="#ficha/FURNAS" data-alvo="f-dia">Mesmo dia em outros anos</a><a href="#ficha/FURNAS" data-alvo="f-ano">Ano contra anos anteriores</a>
     </nav>
     <section class="cartao secao" id="f-sit" aria-labelledby="t-sit">
       <h2 id="t-sit"><small>1</small>Situação em <span id="dia-sit-txt">${dBR(ult.data)}</span></h2>
-      <p class="sub">Base diária. O padrão é o último dia fechado. Ao lado, a usina e as vizinhas da cascata do Grande.<span class="dica">Escolha outro dia para ver a situação daquela data.</span></p>
-      <div class="linha-mapa"><div class="ferramentas"><label>Dia <input type="date" id="dia-sit" value="${ult.data}" min="${DI[0].data}" max="${ult.data}"></label><span class="nota" id="aviso-sit"></span></div></div>
+      <p class="sub">Base diária, na data de referência (o padrão é o último dia fechado). Ao lado, a usina e as vizinhas da cascata do Grande.<span class="dica">Mude a data de referência no alto da página para ver outro dia.</span></p>
+      <p class="nota" id="aviso-sit" style="margin:0 0 8px"></p>
       <div class="sit-grid">
         <div class="valores" id="valores-ficha"></div>
         <div id="mapa-ficha"></div>
@@ -1583,9 +1586,8 @@ function paginaFicha(){
     <section class="cartao secao" id="f-dia" aria-labelledby="t-dia">
       ${barraBaixar([["baixar-dia-png", "PNG", "Baixar o gráfico como imagem"]])}
       <h2 id="t-dia"><small>3</small>Mesmo dia em outros anos</h2>
-      <p class="sub">O valor de um mesmo dia do calendário em cada ano da série diária.<span class="dica">Escolha o dia e a variável.</span></p>
-      <div class="controles"><fieldset><legend>Dia</legend><input type="date" id="dia-ref-f" value="${ult.data}" min="${DI[0].data}" max="${ult.data}"></fieldset>
-        <fieldset><legend>Variável</legend><select id="var-dia">${["vu","cota"].map(k => `<option value="${k}">${VARS[k].r} (${VARS[k].u})</option>`).join("")}</select></fieldset></div>
+      <p class="sub">O valor do dia da data de referência em cada ano da série diária.<span class="dica">Escolha a variável.</span></p>
+      <div class="controles"><fieldset><legend>Variável</legend><select id="var-dia">${["vu","cota"].map(k => `<option value="${k}">${VARS[k].r} (${VARS[k].u})</option>`).join("")}</select></fieldset></div>
       <div class="graf" id="g-dia"></div>
     </section>
     <section class="cartao secao" id="f-ano" aria-labelledby="t-ano">
@@ -1624,7 +1626,8 @@ function paginaFicha(){
     mapaF.atualizar(temBacia ? dia : D.data);
     $("#aviso-sit").textContent = temBacia ? "" : `No mapa, as vizinhas seguem em ${dBR(D.data)}: no protótipo a série da bacia vai de ${dBR(SER_BACIA[0])} a ${dBR(D.data)}.`;
   }
-  $("#dia-sit").addEventListener("change", e => { const v = e.target.value; if (v && v >= e.target.min && v <= e.target.max) situacao(v); });
+  $("#dia-sit").addEventListener("change", e => { const v = e.target.value; if (v && v >= e.target.min && v <= e.target.max){ situacao(v); graficoMesmoDia(); } });
+  $("#dia-sit-hoje").onclick = () => { const e = $("#dia-sit"); e.value = ult.data; e.dispatchEvent(new Event("change")); };
   situacao(ult.data);
 
   // 2. gráficos
@@ -1659,9 +1662,9 @@ function paginaFicha(){
   montarPresets();
 
   // 3. mesmo dia
-  $("#dia-ref-f").onchange = $("#var-dia").onchange = graficoMesmoDia;
-  $("#baixar-dia-png").onclick = () => baixarPNG([$("#g-dia svg")], `sar_furnas_mesmo_dia_${$("#dia-ref-f").value}.png`,
-    `Furnas · ${VARS[$("#var-dia").value].r} em ${dBR($("#dia-ref-f").value).slice(0,5)} de cada ano`, LEG_ANOS(+fichaEstado.ult.data.slice(0,4)));
+  $("#var-dia").onchange = graficoMesmoDia;
+  $("#baixar-dia-png").onclick = () => baixarPNG([$("#g-dia svg")], `sar_furnas_mesmo_dia_${$("#dia-sit").value}.png`,
+    `Furnas · ${VARS[$("#var-dia").value].r} em ${dBR($("#dia-sit").value).slice(0,5)} de cada ano`, LEG_ANOS(+fichaEstado.ult.data.slice(0,4)));
   graficoMesmoDia();
 
   // 4. ano contra anos
@@ -1782,7 +1785,7 @@ function niceStep(bruto){ const p = Math.pow(10, Math.floor(Math.log10(bruto))),
 
 // 3. barras: valor do mesmo dia em cada ano
 function graficoMesmoDia(){
-  const host = $("#g-dia"), DI = fichaEstado.DI, k = $("#var-dia").value, V = VARS[k], ref = $("#dia-ref-f").value || fichaEstado.ult.data;
+  const host = $("#g-dia"), DI = fichaEstado.DI, k = $("#var-dia").value, V = VARS[k], ref = $("#dia-sit").value || fichaEstado.ult.data;
   const mmdd = ref.slice(5), anos = [...new Set(DI.map(o => +o.data.slice(0,4)))], anoAtual = +fichaEstado.ult.data.slice(0,4);
   const dados = anos.map(a => ({a, v: (DI.find(o => o.data===`${a}-${mmdd}`)||{})[k] ?? null}));
   host.innerHTML = "";
