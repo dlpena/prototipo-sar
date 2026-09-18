@@ -3293,6 +3293,12 @@ const FAIXAS_CAN = [
   {n:3, r:"Alerta", de:30, esi:27.0, cor:"#E07B00"}, {n:4, r:"Restrição", de:20, esi:23.0, cor:"#C0392B"},
   {n:5, r:"Especial", de:-Infinity, esi:15.5, cor:"#7A1F1F"}];
 const faixaCan = p => p==null ? null : FAIXAS_CAN.find(f => p >= f.de);
+// Art. 6º: a faixa vale para o mês e é estabelecida até o último dia útil do mês anterior. O protótipo a obtém do
+// volume do último dia do mês anterior; na operação real ela vem do ato mensal da ANA/DAEE (dado a incorporar)
+const fimMesAnterior = iso => isoMais(iso.slice(0,8) + "01", -1);
+const faixaMes = iso => { const d = fimMesAnterior(iso), p = pctCan(d); return p==null ? null : {...faixaCan(p), base:d, p}; };
+const NOME_MES = ["janeiro","fevereiro","março","abril","maio","junho","julho","agosto","setembro","outubro","novembro","dezembro"];
+const mesAno = iso => `${NOME_MES[+iso.slice(5,7)-1]} de ${iso.slice(0,4)}`;
 const rotFaixa = f => `Faixa ${f.n} · ${f.r} (${f.n===1 ? "60% ou mais" : f.n===5 ? "abaixo de 20%" : `${f.de}% a ${FAIXAS_CAN[f.n-2].de}%`})`;
 // Art. 5º: postos de controle do PCJ. Média móvel de 15 dias só no período úmido (faixas 1 a 4); piso de média diária sempre
 const POSTO_REGRA = {PostoAtibaiaValinhos:{mm:[12, 11], piso:10, piso5:10}, PostoAtibaiaAtibaia:{mm:[3, 2], piso:2, piso5:null}, PostoJaguariBuenopolis:{mm:[2.5, 2], piso:2, piso5:2}};
@@ -3312,7 +3318,7 @@ const entrarSis = (sis, ult) => { if (sisOS !== sis){ refOS = ult; sisOS = sis; 
 /* ---------- página geral do módulo ---------- */
 function paginaOutros(){
   if (!OS){ location.hash = "inicio"; return; }
-  const T = D.inicio.textos, ult = CAN.ate, p0 = pctCan(ult), f0 = faixaCan(p0);
+  const T = D.inicio.textos, ult = CAN.ate, p0 = pctCan(ult), f0 = faixaMes(ult);
   const d30 = p0 - pctCan(isoMais(ult, -30)), anoAnt = `${+ult.slice(0,4)-1}${ult.slice(4)}`, pAnt = pctCan(anoAnt);
   const nRes = 4 + OS.sistemas.df.res.length + OS.sistemas.rmbh.res.length;
   $("#titulo-pag").innerHTML = `
@@ -3334,7 +3340,7 @@ function paginaOutros(){
             <div class="corpo"><h3>Sistema Cantareira</h3>
               <div class="n num">${fmt(p0,1)}<small>%</small></div>
               <div class="r">do volume útil em ${dBR(ult)}, pela Resolução Conjunta ANA/DAEE nº 925/2017</div>
-              <div class="faixa-tag"><i style="background:${f0.cor}"></i>${rotFaixa(f0)} pelo volume do dia</div>
+              <div class="faixa-tag"><i style="background:${f0.cor}"></i>Faixa de ${mesAno(ult)}: ${f0.n} · ${f0.r}</div>
               <div class="l" style="margin-top:8px"><span>Em 30 dias</span><span class="num">${d30>0?"+":d30<0?"−":""}${fmt(Math.abs(d30),1)} p.p.</span></div>
               <div class="l"><span>Mesmo dia de ${anoAnt.slice(0,4)}</span><span class="num">${fmt(pAnt,1)}%</span></div></div>
             <button type="button" class="acao" data-abrir="cantareira">Abrir</button>
@@ -3401,7 +3407,7 @@ function paginaCantareira(){
           <div class="faixa-tag" id="c-faixa"></div>
           <div class="regua-faixas">${FAIXAS_CAN.slice().reverse().map((f,i,a) => { const ate = f.n===1 ? 100 : FAIXAS_CAN[f.n-2].de, de = f.n===5 ? 0 : f.de; return `<span style="width:${ate-de}%;background:${f.cor};opacity:.8" title="${rotFaixa(f)}"></span>`; }).join("")}</div>
           <div class="regua-rot" id="c-regua"></div>
-          <p class="def">A faixa aqui é a do volume do dia. A faixa que vale para as vazões de retirada e para o PCJ é fixada mensalmente pela ANA e pelo DAEE (Art. 6º), e pode ser outra.</p>
+          <p class="def">A faixa vale para o mês inteiro: é estabelecida pela ANA e pelo DAEE até o último dia útil do mês anterior (Art. 6º), e as faixas 4 e 5 podem ser estabelecidas a qualquer momento. Aqui ela é obtida do volume do último dia do mês anterior; a marca na régua é o volume do dia.</p>
         </div>
         <ul class="comparacoes" id="c-comp"></ul>
       </div>
@@ -3452,7 +3458,7 @@ function paginaCantareira(){
         <tbody id="corpo-pcj"></tbody></table></div>
       <div class="legenda" style="margin-top:18px"><span><svg width="22" height="8" aria-hidden="true"><line x1="0" x2="22" y1="4" y2="4" stroke="#9FB7D3" stroke-width="1.6"/></svg>Vazão diária</span><span><svg width="22" height="8" aria-hidden="true"><line x1="0" x2="22" y1="4" y2="4" stroke="#283377" stroke-width="2"/></svg>Média móvel de 15 dias</span><span><svg width="22" height="8" aria-hidden="true"><line x1="0" x2="22" y1="4" y2="4" stroke="#C0392B" stroke-width="1.6" stroke-dasharray="5 4"/></svg>Mínimo da média móvel (período úmido)</span><span><svg width="22" height="8" aria-hidden="true"><line x1="0" x2="22" y1="4" y2="4" stroke="#E07B00" stroke-width="1.6" stroke-dasharray="5 4"/></svg>Mínimo da média diária</span></div>
       <div class="postos-graf" id="g-pcj" style="margin-top:6px"></div>
-      <p class="nota" style="margin:10px 0 0">A média móvel de 15 dias é calculada pelo SAR a partir da vazão diária informada pela SABESP; pela resolução, as vazões de controle são calculadas pelo DAEE e divulgadas em boletim diário. A faixa usada para escolher o mínimo é a do volume do dia, e o período úmido ou seco é o do mês da data.</p>
+      <p class="nota" style="margin:10px 0 0">A média móvel de 15 dias é calculada pelo SAR a partir da vazão diária informada pela SABESP; pela resolução, as vazões de controle são calculadas pelo DAEE e divulgadas em boletim diário. A faixa usada para escolher o mínimo é a do mês (volume do último dia do mês anterior), e o período úmido ou seco é o do mês da data.</p>
     </section>
     <p class="nota">Fontes: ${esc(OS.fontes.sabesp)} (reservatórios, túneis, Santa Inês, transferência, chuva, médias de longo termo e postos); ${esc(OS.fontes.resolucao)}. O volume útil do sistema é calculado pelo SAR com os quatro reservatórios da resolução; o percentual publicado pela SABESP inclui também o reservatório de Águas Claras e difere deste em até 0,05 ponto percentual.</p>`;
   $$(".indice a").forEach(a => a.onclick = e => { e.preventDefault(); document.getElementById(a.dataset.alvo).scrollIntoView({behavior:"smooth", block:"start"}); });
@@ -3460,7 +3466,7 @@ function paginaCantareira(){
   $("#dia-can").onchange = () => ir($("#dia-can").value || ult);
   $("#dia-can-hoje").onclick = () => ir(ult);
   function desenhar(){
-    const ref = refOS, p0 = pctCan(ref), f0 = faixaCan(p0);
+    const ref = refOS, p0 = pctCan(ref), f0 = faixaMes(ref);
     ["c-sit-dia","c-res-dia","c-bal-dia","c-pcj-dia"].forEach(id => $("#"+id).textContent = dBR(ref));
     situacaoCan(ref, p0, f0); tabelaCan(ref); balancoCan(ref, f0); anoCan(ref); diaCan(ref); mesCan(ref); pcjCan(ref, f0);
   }
@@ -3482,7 +3488,9 @@ function situacaoCan(ref, p0, f0){
   const ant = `${+ref.slice(0,4)-1}${ref.slice(4)}`;
   $("#c-valor").innerHTML = `${fmt(p0,1)}<small>%</small>`;
   $("#c-quando").textContent = `volume útil do sistema em ${dBR(ref)} · ${fmt(vol,1)} de ${fmt(CAN.vu,2)} hm³`;
-  $("#c-faixa").innerHTML = f0 ? `<i style="background:${f0.cor}"></i><span>${rotFaixa(f0)} pelo volume do dia · limite de retirada em Santa Inês nessa faixa: <b>${fmt(f0.esi,1)} m³/s</b> (média mensal)</span>` : "";
+  const fd = faixaCan(p0), prox = isoMais(isoMais(ref.slice(0,8) + "28", 4).slice(0,8) + "01", 0);
+  $("#c-faixa").innerHTML = f0 ? `<i style="background:${f0.cor}"></i><span><b>Faixa de ${mesAno(ref)}: ${rotFaixa(f0)}</b>, pelo volume de ${dBR(f0.base)} (${fmt(f0.p,1)}%) · limite de retirada em Santa Inês: <b>${fmt(f0.esi,1)} m³/s</b> (média mensal)` +
+    (fd && fd.n !== f0.n ? `<br>Pelo volume do dia, o sistema já está na faixa ${fd.n} (${fd.r}); a faixa de ${mesAno(prox)} sai do volume do fim deste mês.` : "") + `</span>` : "";
   $("#c-regua").innerHTML = [0,20,30,40,60,100].map(v => `<b style="left:${v}%">${v}</b>`).join("") + (p0!=null ? `<span class="regua-marca" style="left:${Math.max(0, Math.min(100, p0))}%;top:-19px" title="${fmt(p0,1)}%"></span>` : "");
   $("#c-comp").innerHTML = `<li><span>Em 7 dias</span><b class="num">${dif(p0, pctCan(isoMais(ref,-7)))}</b></li>
     <li><span>Em 30 dias</span><b class="num">${dif(p0, pctCan(isoMais(ref,-30)))}</b></li>
@@ -3556,7 +3564,7 @@ function balancoCan(ref, f0){
   const esiMes = mes.length ? mes.reduce((a,b) => a+b, 0)/mes.length : null;
   $("#c-bal-resumo").innerHTML = `
     <div class="v"><div class="r">Retirada do sistema no dia</div><div class="n num">${fmt(esi + jus,1)}<small>m³/s</small></div><div class="c">Santa Inês ${fmt(esi,1)} + descargas para jusante ${fmt(jus,2)}, como define a resolução (Art. 1º, § 2º)</div></div>
-    <div class="v"><div class="r">Santa Inês, média do mês até ${dBR(ref).slice(0,5)}</div><div class="n num">${fmt(esiMes,1)}<small>m³/s</small></div><div class="c">${f0 ? `limite médio mensal na faixa ${f0.n} (${f0.r}): ${fmt(f0.esi,1)} m³/s, pela faixa do volume do dia` : ""}</div></div>
+    <div class="v"><div class="r">Santa Inês, média do mês até ${dBR(ref).slice(0,5)}</div><div class="n num">${fmt(esiMes,1)}<small>m³/s</small></div><div class="c">${f0 ? `limite médio mensal na faixa de ${mesAno(ref)}, ${f0.n} (${f0.r}): ${fmt(f0.esi,1)} m³/s` : ""}</div></div>
     <div class="v"><div class="r">Transferência do Paraíba do Sul, no dia</div><div class="n num">${fmt(tr,2)}<small>m³/s</small></div><div class="c">nas faixas 2 a 4, somada ao limite de retirada da SABESP (Art. 4º, § 2º)</div></div>`;
 }
 function anoCan(ref){
@@ -3619,12 +3627,12 @@ function pcjCan(ref, f0){
     return `<tr><td><span class="nm">${esc(p.nome)}</span><span class="rio">${p.codigo} · ${p.rio}</span></td>
       <td class="r num ${cls(q, R.piso)}">${fmt(q,2)}</td><td class="r num ${cls(mm, R.mm)}">${fmt(mm,2)}</td>
       <td class="r num">${R.mm==null ? "não se aplica" : fmt(R.mm,1)}</td><td class="r num">${R.piso==null ? "não se aplica" : fmt(R.piso,1)}</td>
-      <td class="regra">período ${R.periodo}${f0 ? `, faixa ${f0.n}` : ""}<span class="rio">${R.art}</span></td></tr>`; }).join("");
+      <td class="regra">período ${R.periodo}${f0 ? `, faixa ${f0.n} do mês` : ""}<span class="rio">${R.art}</span></td></tr>`; }).join("");
   const host = $("#g-pcj"); host.innerHTML = "";
   CAN.postos.forEach(p => {
     const div = document.createElement("div"); div.className = "graf"; host.append(div);
     const S = [];
-    for (let i = i0; i <= i1; i++){ const iso = isoMais(CAN.det_de, i), f = faixaCan(pctCan(iso)), R = regraPosto(p.k, iso, f);
+    for (let i = i0; i <= i1; i++){ const iso = isoMais(CAN.det_de, i), f = faixaMes(iso), R = regraPosto(p.k, iso, f);
       S.push({t:Date.parse(iso + "T00:00:00Z"), q:p.q[i], mm:mediaMovel(p.q, i), meta:R.mm, piso:R.piso}); }
     graficoLinhas(div, S, [{k:"q", r:"Vazão diária", cor:"#9FB7D3", u:"m³/s", dec:2}, {k:"mm", r:"Média móvel de 15 dias", cor:"#283377", u:"m³/s", dec:2},
       {k:"meta", r:"Mínimo da média móvel", cor:"#C0392B", u:"m³/s", dec:1, tracejado:true}, {k:"piso", r:"Mínimo da média diária", cor:"#E07B00", u:"m³/s", dec:1, tracejado:true}],
