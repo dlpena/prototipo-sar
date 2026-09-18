@@ -171,6 +171,8 @@ main>section+section,main>.secao+.secao{margin-top:22px}
 /* mapa + lista */
 .explorar{display:grid;grid-template-columns:minmax(0,.68fr) minmax(0,1.32fr);gap:22px;align-items:stretch}
 .mapa-caixa{position:relative;padding:18px 18px 10px}
+.explorar>.mapa-caixa{display:flex;flex-direction:column;justify-content:center}
+.explorar>.mapa-caixa>#mapa-sin{width:100%}
 #mapa-sin svg{display:block;width:100%;height:auto;max-height:460px;margin:0 auto}
 .brasil{fill:#F4F4F5;stroke:#C9CDD4;stroke-width:.8}
 .sub-bacia{stroke:#fff;stroke-width:2.2;stroke-linejoin:round;transition:fill .12s}
