@@ -2303,7 +2303,7 @@ function paginaNE(){
     </nav>
     <section class="cartao intro" aria-label="Sobre o módulo">
       <p>Os reservatórios do semiárido não têm medição diária regular. Para a <b>data de referência</b> escolhida, cada reservatório entra com a medição de data mais próxima, até ${NEd.limiar_dias} dias antes ou depois, como faz o portal do SAR; quem não tiver medição nessa janela aparece como <b>sem informação</b> e fica fora do volume acumulado, e a capacidade equivalente soma só as capacidades de quem entrou. No portal, o mapa pinta sempre o valor mais recente de cada reservatório, ainda que antigo; aqui o sem informação fica cinza, para o mapa, a tabela e o agregado contarem a mesma história.</p>
-      <p>Reservatórios com régua lida por observador, mas sem curva cota-volume validada, aparecem como <b>só nível</b>: contam como acompanhados e mostram se subiram ou desceram, mas não entram no volume acumulado. Os <b>${fint(OCULTOS.size)}</b> reservatórios do cadastro do SAR sem nenhuma leitura nos últimos 12 meses saem das contagens desta página e seguem na área de dados.</p>
+      <p>Reservatórios com régua lida por observador, mas sem curva cota-volume validada, aparecem como <b>só nível</b>: contam como acompanhados e mostram se subiram ou desceram, mas não entram no volume acumulado. Os <b>${fint(OCULTOS.size)}</b> reservatórios cadastrados sem nenhuma leitura nos últimos 12 meses saem das contagens desta página e seguem na área de dados.</p>
     </section>
     <section class="cartao secao" id="n-estados" aria-labelledby="t-n-estados">
       ${barraBaixar([["baixar-ne-mapa", "PNG", "Baixar o mapa dos estados como imagem"], ["baixar-ne-csv", "CSV", "Baixar a tabela dos estados em CSV"]])}
@@ -2529,12 +2529,12 @@ async function kmzEstadoNE(lista, estado){
   const pasta = k => { const L = com.filter(r => r.faixa===k); return L.length ? `<Folder><name>${x(ROT_FAIXA(k))}</name>${L.map(r =>
     `<Placemark><name>${x(caso(r.nome))}</name><styleUrl>#${k}</styleUrl><description><![CDATA[<b>${r.volume_pct==null ? "sem informação" : fmt(r.volume_pct,1)+"% do volume"}</b><br>Volume: ${r.volume_hm3==null?"–":fmt(r.volume_hm3,1)} hm³<br>Capacidade: ${r.capacidade_hm3==null?"–":fmt(r.capacidade_hm3,1)} hm³<br>Município: ${x(r.municipio||"–")}<br>Bacia: ${x(caso(r.bacia||"–"))}<br>Última medição: ${r.data ? dBR(r.data) : "–"} (${dDias(r)})]]></description><Point><coordinates>${r.lon},${r.lat},0</coordinates></Point></Placemark>`).join("")}</Folder>` : ""; };
   const pastaNivel = () => niv.length ? `<Folder><name>Só nível (sem curva cota-volume)</name>${niv.map(r =>
-    `<Placemark><name>${x(caso(r.nome))}</name><styleUrl>#nivel</styleUrl><description><![CDATA[<b>${r.nivel_m==null ? "sem leitura na janela" : fmt(r.nivel_m,2)+" m na régua"}</b><br>Em 30 dias: ${r.var30==null ? "–" : sinal(r.var30)+" m"}<br>Município: ${x(r.municipio||"–")}<br>Leitura usada: ${r.data ? dBR(r.data)+" ("+dDias(r)+")" : "última em "+(r.ultima ? dBR(r.ultima) : "–")}<br>Leitura do observador (HidroInfoAna), não validada; sem volume por falta de curva cota-volume.]]></description><Point><coordinates>${r.lon},${r.lat},0</coordinates></Point></Placemark>`).join("")}</Folder>` : "";
+    `<Placemark><name>${x(caso(r.nome))}</name><styleUrl>#nivel</styleUrl><description><![CDATA[<b>${r.nivel_m==null ? "sem leitura na janela" : fmt(r.nivel_m,2)+" m na régua"}</b><br>Em 30 dias: ${r.var30==null ? "–" : sinal(r.var30)+" m"}<br>Município: ${x(r.municipio||"–")}<br>Leitura usada: ${r.data ? dBR(r.data)+" ("+dDias(r)+")" : "última em "+(r.ultima ? dBR(r.ultima) : "–")}<br>Leitura do observador, não validada; sem volume por falta de curva cota-volume.]]></description><Point><coordinates>${r.lon},${r.lat},0</coordinates></Point></Placemark>`).join("")}</Folder>` : "";
   const abgr = c => "ff" + c.slice(5,7) + c.slice(3,5) + c.slice(1,3);
   const estilo = (k, c, forma) => `<Style id="${k}"><IconStyle><color>${abgr(c)}</color><scale>0.9</scale><Icon><href>http://maps.google.com/mapfiles/kml/shapes/${forma}.png</href></Icon></IconStyle></Style>`;
   const kml = `<?xml version="1.0" encoding="UTF-8"?><kml xmlns="http://www.opengis.net/kml/2.2"><Document><name>SAR · ${x(estado)} · data de referência ${dBR(dataRef)}</name>` +
     `<description><![CDATA[Reservatórios do módulo Nordeste e Semiárido: ${x(estado)}. Faixas: restrição abaixo de 20%, atenção de 20% a 50%, normal acima de 50%; sem informação quando não há medição na janela de ${NEd.limiar_dias} dias em torno da data de referência.` +
-    (niv.length ? ` Só nível: leitura da régua pelo observador (HidroInfoAna), sem volume por falta de curva cota-volume validada.` : "") + ` Fonte: SAR/ANA.]]></description>` +
+    (niv.length ? ` Só nível: leitura da régua pelo observador, sem volume por falta de curva cota-volume validada.` : "") + ` Fonte: SAR/ANA.]]></description>` +
     ["restricao","atencao","normal","sem"].map(k => estilo(k, FX[k].cor, "placemark_circle")).join("") + (niv.length ? estilo("nivel", COR_NV, "triangle") : "") +
     ["restricao","atencao","normal","sem"].map(pasta).join("") + pastaNivel() + `</Document></kml>`;
   const zip = new JSZip(); zip.file("doc.kml", kml);
@@ -2550,7 +2550,7 @@ async function pdfTabelaEstado(lista, niv, estado, uf){
   doc.text(`${estado} · reservatórios · data de referência ${dBR(dataRef)}`, 40, 46);
   doc.setFont("helvetica","normal"); doc.setFontSize(8.5); doc.setTextColor(...CINZA);
   doc.text(doc.splitTextToSize(`${lista.length + niv.length} reservatórios, na ordem das tabelas em tela · cada um com a leitura de data mais próxima de ${dBR(dataRef)}, até ${NEd.limiar_dias} dias antes ou depois; fora dessa janela, sem informação e fora do volume acumulado.` +
-    (niv.length ? ` Só nível: leitura da régua pelo observador (HidroInfoAna), não validada, sem volume por falta de curva cota-volume.` : "") + ` Fonte: ${NEd.fontes.medicoes}.`, larg-80), 40, 61);
+    (niv.length ? ` Só nível: leitura da régua pelo observador, não validada, sem volume por falta de curva cota-volume.` : "") + ` Fonte: ${NEd.fontes.medicoes}.`, larg-80), 40, 61);
   const estilos = {styles:{font:"helvetica", fontSize:8.5, textColor:TINTA, cellPadding:{top:4, right:6, bottom:4, left:6}, valign:"middle"},
     headStyles:{fontStyle:"bold", textColor:AZUL, halign:"right"}, theme:"plain", margin:{left:40, right:40}};
   const cabecalho = (d, esq) => {
@@ -2651,7 +2651,7 @@ function graficoMonitoramento(host, hist, rotulo, op = {}){
   const passo = niceStep(topo/4), hi = Math.ceil(topo/passo)*passo;
   const faixa = (W-m.l-m.r)/anos.length, bw = Math.min(12, faixa*.36);
   const Y = v => m.t + (hi-v)/hi*(H-m.t-m.b);
-  const COR = {sar:"#283377", hidro:"#8FAFD4"}, ROT = op.rot || {sar:"com volume no SAR", hidro:"com leitura de nível no HidroInfoAna"};
+  const COR = {sar:"#283377", hidro:"#8FAFD4"}, ROT = op.rot || {sar:"com volume", hidro:"com leitura de nível"};
   const svg = svgEl("svg",{viewBox:`0 0 ${W} ${H}`, role:"img", "aria-label":rotulo});
   const eixo = svgEl("g",{class:"eixo"});
   for (let v = 0; v <= hi+1e-9; v += passo){
@@ -2754,8 +2754,8 @@ function paginaEstado(uf){
     : temVol ? "Reservatórios acompanhados pela ANA em convênio com o órgão gestor estadual, no recorte do semiárido."
     : `Nenhum reservatório ${de} ${estado} tem volume calculado hoje. Há réguas lidas por observador, mas sem curva cota-volume validada para transformar a leitura em volume: a página mostra o nível.`;
   const aviso = [
-    temNiv ? `<p><b>Como ler o nível.</b> É a cota da régua lida pelo observador, registrada no HidroInfoAna e ainda não validada pela ANA. Ela mostra se o reservatório subiu ou desceu, não quanta água há: sem a curva cota-volume não há volume nem percentual, e esses reservatórios ficam fora do volume acumulado. Também não compara um reservatório com outro, porque cada régua tem a sua referência.</p>` : "",
-    oc.n ? `<p><b>${fint(oc.n)} reservatórios</b> do cadastro do SAR ${em} ${estado} não têm nenhuma leitura nos últimos 12 meses (a última ${quando}). O acompanhamento foi interrompido: eles saem desta página e seguem na área de dados.</p>` : "",
+    temNiv ? `<p><b>Como ler o nível.</b> É a cota da régua lida pelo observador, ainda não validada pela ANA. Ela mostra se o reservatório subiu ou desceu, não quanta água há: sem a curva cota-volume não há volume nem percentual, e esses reservatórios ficam fora do volume acumulado. Também não compara um reservatório com outro, porque cada régua tem a sua referência.</p>` : "",
+    oc.n ? `<p><b>${fint(oc.n)} reservatórios</b> cadastrados ${em} ${estado} não têm nenhuma leitura nos últimos 12 meses (a última ${quando}). O acompanhamento foi interrompido: eles saem desta página e seguem na área de dados.</p>` : "",
     ...NV.a_verificar.map(x => `<p><b>${esc(caso(x.nome))}</b> tem leitura, mas a série tem um salto de ${fmt(x.maior_salto_cm/100,1)} m entre duas leituras seguidas, que precisa ser conferido antes de entrar.</p>`)].join("");
   $("#titulo-pag").innerHTML = `
     <p class="trilha"><a href="#inicio">Início</a><span class="sep">›</span><a href="#ne">Nordeste e Semiárido</a><span class="sep">›</span>${estado}</p>
@@ -2807,7 +2807,7 @@ function paginaEstado(uf){
     <section class="cartao secao" id="u-hist" aria-labelledby="t-u-hist">
       ${barraBaixar([["baixar-uf-hist", "PNG", "Baixar o gráfico como imagem"]])}
       <h2 id="t-u-hist"><small>${num("u-hist")}</small>Histórico do monitoramento</h2>
-      <p class="sub">Reservatórios ${de} ${estado} com pelo menos uma medição em cada ano: com volume no SAR${temHidro ? ", e com leitura de nível nas estações de açude do HidroInfoAna" : ""}. Mostra quando o acompanhamento começou, parou ou mudou de fonte.</p>
+      <p class="sub">Reservatórios ${de} ${estado} com pelo menos uma medição em cada ano: com volume${temHidro ? " e com leitura de nível na régua" : ""}. Mostra quando o acompanhamento começou, parou ou passou a ter só o nível.</p>
       <div class="graf" id="g-uf-hist"></div>
     </section>
     <p class="nota fontes-inicio" id="fontes-uf"></p>`;
@@ -3001,7 +3001,7 @@ function paginaFichaNE(cod){
   if (dataRef < inicio) dataRef = inicio;
   if (dataRef > NEd.serie_ate) dataRef = NEd.serie_ate;
   const nomeF = caso(F.nome);
-  const rotVar = k => soNivel && k==="pct" ? "Volume no SAR" : VNE[k].r;
+  const rotVar = k => soNivel && k==="pct" ? "Volume" : VNE[k].r;
   const varsGraf = soNivel ? [] : ["pct","hm3","cota"], varsComp = soNivel ? ["nivel","pct"] : ["pct","cota"];
   const opcao = k => `<option value="${k}">${rotVar(k)} (${VNE[k].u})</option>`;
   $("#titulo-pag").innerHTML = `
@@ -3009,12 +3009,12 @@ function paginaFichaNE(cod){
     <h1>${nomeF}</h1>
     <p class="lead">Açude em ${esc(caso(F.municipio || "–"))}, bacia ${esc(caso(F.bacia || "–"))}, ${F.estado}.${soNivel ? " Hoje tem só a leitura de nível: não há curva cota-volume validada para calcular o volume." : ""}</p>
     <div class="carimbo"><span>Código SAR <b>${F.codigo}</b></span><span>Capacidade <b>${fmt(F.capacidade_hm3,1)} hm³</b></span>
-      <span>No SAR de <b>${dBR(SR[0].iso)}</b> a <b>${dBR(SR[SR.length-1].iso)}</b> · ${fint(F.linhas_sar)} medições</span>
-      ${soNivel ? `<span>Nível no HidroInfoAna desde <b>${dBR(SN[0].iso)}</b></span>` : ""}</div>
+      <span>${soNivel ? "Volume" : "Medições"} de <b>${dBR(SR[0].iso)}</b> a <b>${dBR(SR[SR.length-1].iso)}</b> · ${fint(F.linhas_sar)} medições</span>
+      ${soNivel ? `<span>Nível na régua desde <b>${dBR(SN[0].iso)}</b></span>` : ""}</div>
     ${seletorData("data-f", inicio, NEd.serie_ate)}`;
   $("#conteudo").innerHTML = `
     <nav class="indice" aria-label="Seções da página">${[["fn-sit","Situação"],["fn-graf","Gráfico"],["fn-dia","Mesmo dia em outros anos"],["fn-ano","Ano contra anos anteriores"]].map(([id, r]) => `<a href="#ne/ficha/${cod}" data-alvo="${id}">${r}</a>`).join("")}</nav>
-    ${soNivel ? `<div class="aviso-nivel"><p><b>Como ler.</b> O nível é a cota da régua lida pelo observador, registrada no HidroInfoAna e ainda não validada pela ANA: mostra se o açude subiu ou desceu, não quanta água há. O volume que aparece à parte é o que o SAR registrou até ${dBR(ultVol.iso)}, quando o acompanhamento de volume parou. As duas séries vêm de fontes e réguas diferentes e não são emendadas.</p></div>` : ""}
+    ${soNivel ? `<div class="aviso-nivel"><p><b>Como ler.</b> O nível é a cota da régua lida pelo observador, ainda não validada pela ANA: mostra se o açude subiu ou desceu, não quanta água há. O volume que aparece à parte é o que foi publicado até ${dBR(ultVol.iso)}, quando o acompanhamento de volume parou. As duas séries vêm de fontes e réguas diferentes e não são emendadas.</p></div>` : ""}
     <section class="cartao secao" id="fn-sit" aria-labelledby="t-fn-sit">
       <h2 id="t-fn-sit"><small>1</small>Situação em <span id="fn-dia-txt"></span></h2>
       <p class="sub">Cada valor é a leitura mais próxima da data de referência, até ${LIM} dias antes ou depois, com a data da leitura. Ao lado, o açude (círculo azul) e os vizinhos da bacia ${esc(caso(F.bacia || ""))}.<span class="dica">Clique num vizinho para abrir a ficha dele.</span></p>
@@ -3024,7 +3024,7 @@ function paginaFichaNE(cod){
     <section class="cartao secao" id="fn-graf" aria-labelledby="t-fn-graf">
       ${barraBaixar([["baixar-f-csv", "CSV", "Baixar a série do período em CSV"], ["baixar-f-png", "PNG", "Baixar o gráfico como imagem"]])}
       <h2 id="t-fn-graf"><small>2</small>Gráfico</h2>
-      <p class="sub">${soNivel ? "Nível na régua (HidroInfoAna) e, abaixo, o volume que o SAR teve, no mesmo período. " : ""}Pontos nas datas reais das leituras; vão de mais de ${VAO_MAX} dias não é ligado. Círculo vazado vermelho: leitura descartada pela crítica, fora da linha. Tracejado vermelho: data de referência.${soNivel ? "" : '<span class="dica">Escolha o período e a variável.</span>'}</p>
+      <p class="sub">${soNivel ? "Nível na régua e, abaixo, o volume publicado até o fim do acompanhamento de volume, no mesmo período. " : ""}Pontos nas datas reais das leituras; vão de mais de ${VAO_MAX} dias não é ligado. Círculo vazado vermelho: leitura descartada pela crítica, fora da linha. Tracejado vermelho: data de referência.${soNivel ? "" : '<span class="dica">Escolha o período e a variável.</span>'}</p>
       <div class="controles painel">
         <fieldset class="largo"><legend>Período</legend><span id="presets" class="presets"></span><span class="datas"><label>de <input type="date" id="g-de"></label><label>até <input type="date" id="g-ate"></label></span></fieldset>
         ${varsGraf.length ? `<fieldset><legend>Variável</legend>${varsGraf.map((k,i) => `<label><input type="radio" name="var-f" value="${k}"${i===0 ? " checked" : ""}> <i class="sw" style="border-color:${VNE[k].cor}"></i>${VNE[k].r} (${VNE[k].u})</label>`).join("")}</fieldset>` : ""}
@@ -3087,7 +3087,7 @@ function paginaFichaNE(cod){
       } else h += `<div class="v principal"><div class="r">Nível na régua</div><div class="n num vazio">sem leitura na janela</div><div class="c"><span>a leitura de nível começa em ${dBR(SN[0].iso)}</span></div></div>`;
       const vSar = leituraNa(SR, "pct", dataRef, LIM);
       h += caixa("Volume", "–", "", "sem curva cota-volume validada");
-      h += vSar ? caixa("Volume no SAR", fmt(vSar.v,1), "%", `em ${dBR(vSar.iso)}`) : caixa("Volume no SAR", fmt(ultVol.pct,1), "%", `última leitura, ${dBR(ultVol.iso)}`);
+      h += vSar ? caixa("Volume", fmt(vSar.v,1), "%", `em ${dBR(vSar.iso)}`) : caixa("Volume", fmt(ultVol.pct,1), "%", `última leitura, ${dBR(ultVol.iso)}`);
       h += caixa("Capacidade", fmt(F.capacidade_hm3,1), "hm³", "");
     }
     $("#valores-ficha").innerHTML = h;
@@ -3150,14 +3150,14 @@ function paginaFichaNE(cod){
       const n = grafico($("#g-f1"), k, de, ate, `${VNE[k].r} (${VNE[k].u})`);
       $("#resumo-f").textContent = `${fint(n)} leituras de ${VNE[k].r.toLowerCase()} de ${dBR(de)} a ${dBR(ate)}.`;
     } else {
-      const n1 = grafico($("#g-f1"), "nivel", de, ate, "Nível na régua (m) · HidroInfoAna");
-      const n2 = grafico($("#g-f2"), "pct", de, ate, `Volume no SAR (%) · acompanhamento até ${dBR(ultVol.iso)}`);
-      $("#resumo-f").textContent = `${fint(n1)} leituras de nível e ${fint(n2)} de volume no SAR de ${dBR(de)} a ${dBR(ate)}.`;
+      const n1 = grafico($("#g-f1"), "nivel", de, ate, "Nível na régua (m)");
+      const n2 = grafico($("#g-f2"), "pct", de, ate, `Volume (%) · acompanhamento até ${dBR(ultVol.iso)}`);
+      $("#resumo-f").textContent = `${fint(n1)} leituras de nível e ${fint(n2)} de volume de ${dBR(de)} a ${dBR(ate)}.`;
     }
   }
   const hist = {};
   for (let a = +inicio.slice(0,4); a <= anoFim; a++) hist[a] = {sar: SR.filter(o => o.iso.startsWith(String(a))).length, hidro: soNivel ? SN.filter(o => o.iso.startsWith(String(a))).length : null};
-  graficoMonitoramento($("#g-med"), hist, "Medições por ano", {altura:180, rot:{sar:"no SAR", hidro:"leituras de nível no HidroInfoAna"}});
+  graficoMonitoramento($("#g-med"), hist, "Medições por ano", {altura:180, rot:{sar:"leituras com volume", hidro:"leituras de nível"}});
 
   // 3. mesmo dia em outros anos (regra dos 30 dias em cada ano)
   $("#var-dia-f").onchange = mesmoDia;
