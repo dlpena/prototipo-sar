@@ -3032,7 +3032,7 @@ function paginaFichaNE(cod){
     <section class="cartao secao" id="fn-graf" aria-labelledby="t-fn-graf">
       ${barraBaixar([["baixar-f-csv", "CSV", "Baixar a série do período em CSV"], ["baixar-f-png", "PNG", "Baixar o gráfico como imagem"]])}
       <h2 id="t-fn-graf"><small>2</small>Gráfico</h2>
-      <p class="sub">${soNivel ? "Nível na régua e, abaixo, o volume publicado até o fim do acompanhamento de volume, no mesmo período. " : ""}Pontos nas datas reais das leituras; vão de mais de ${VAO_MAX} dias não é ligado. Círculo vazado vermelho: leitura descartada pela crítica, fora da linha. Tracejado vermelho: data de referência.${soNivel ? "" : '<span class="dica">Escolha o período e a variável.</span>'}</p>
+      <p class="sub">${soNivel ? "Nível na régua e, abaixo, o volume publicado até o fim do acompanhamento de volume, no mesmo período. " : ""}Pontos nas datas reais das leituras; vão de mais de ${VAO_MAX} dias não é ligado. Tracejado vermelho: data de referência.${soNivel ? "" : '<span class="dica">Escolha o período e a variável.</span>'}</p>
       <div class="controles painel">
         <fieldset class="largo"><legend>Período</legend><span id="presets" class="presets"></span><span class="datas"><label>de <input type="date" id="g-de"></label><label>até <input type="date" id="g-ate"></label></span></fieldset>
         ${varsGraf.length ? `<fieldset><legend>Variável</legend>${varsGraf.map((k,i) => `<label><input type="radio" name="var-f" value="${k}"${i===0 ? " checked" : ""}> <i class="sw" style="border-color:${VNE[k].cor}"></i>${VNE[k].r} (${VNE[k].u})</label>`).join("")}</fieldset>` : ""}
@@ -3132,14 +3132,10 @@ function paginaFichaNE(cod){
   const pontosDe = (k, de, ate) => { const out = []; let ant = null;
     serieDe(k).forEach(o => { if (o.iso < de || o.iso > ate || o[k]==null) return; if (ant && o.d - ant.d > VAO_MAX) out.push({t:(ant.t + o.t)/2, [k]:null}); out.push(o); ant = o; });
     return out; };
-  const descartesDe = k => k==="cota" ? F.descartes.cota : k==="pct" ? F.descartes.volume : k==="nivel" ? F.nivel.descartes : [];
   const porCima = (k, de, ate) => (svg, X, Y, g) => {
     const P = serieDe(k).filter(o => o.iso >= de && o.iso <= ate && o[k]!=null);
     P.forEach((o,i) => { const a = P[i-1], b = P[i+1];
       if ((!a || o.d - a.d > VAO_MAX) && (!b || b.d - o.d > VAO_MAX)) svg.append(svgEl("circle",{cx:X(o.t), cy:Y(o[k]), r:2.6, fill:VNE[k].cor})); });
-    descartesDe(k).filter(x => x[0] >= de && x[0] <= ate).forEach(([iso, v, regra]) => {
-      const c = svgEl("circle",{cx:X(Date.parse(iso + "T00:00:00Z")), cy:Math.max(g.m.t, Math.min(g.H - g.m.b, Y(v))), r:3.6, fill:"#fff", stroke:"#C0392B", "stroke-width":1.6});
-      const ti = svgEl("title"); ti.textContent = `${dBR(iso)}: ${fmt(v, VNE[k].dec)} ${VNE[k].u}, descartada pela crítica (${regra})`; c.append(ti); svg.append(c); });
     if (dataRef >= de && dataRef <= ate){ const x = X(Date.parse(dataRef + "T00:00:00Z"));
       svg.append(svgEl("line",{x1:x, x2:x, y1:g.m.t, y2:g.H - g.m.b, stroke:"#C0392B", "stroke-width":1, "stroke-dasharray":"3 3", opacity:.7})); }
   };
