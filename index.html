@@ -2335,9 +2335,9 @@ function paginaNE(){
     <section class="cartao secao" id="n-ano" aria-labelledby="t-n-ano">
       ${barraBaixar([["baixar-ne-ano", "PNG", "Baixar o gráfico como imagem"]])}
       <h2 id="t-n-ano"><small>3</small>Ao longo do ano</h2>
-      <p class="sub">Volume acumulado do Nordeste em cada ano, sobreposto no mesmo calendário. ${TXT_CURVA} O tracejado marca a data de referência.</p>
+      <p class="sub">Volume armazenado nos reservatórios do Nordeste com medição, em % da capacidade deles, de ${anosCurva()}. Passe o mouse para comparar o mesmo dia nos cinco anos; o tracejado marca a data de referência.</p>
       <div class="graf" id="g-ne-ano"></div>
-      <div class="graf cob" id="g-ne-cob"></div>
+      <p class="nota" style="margin:10px 0 0">${NOTA_CURVA}</p>
     </section>
     <section class="cartao secao" id="n-dia" aria-labelledby="t-n-dia">
       ${barraBaixar([["baixar-ne-dia", "PNG", "Baixar o gráfico como imagem"]])}
@@ -2410,7 +2410,7 @@ function paginaNE(){
       <li><span>Menor valor da série<small>${anos[0]} a ${ano}, em ${menor}</small></span><b class="num">${fmt(md[menor],1)}%</b></li>
       <li><span>Sem informação<small>de ${fint(tot.n)} acompanhados, sem leitura na janela</small></span><b class="num">${fint(tot.sem_info)}</b></li>`;
 
-    desenharCurva("NE", $("#g-ne-ano"), $("#g-ne-cob"), "Volume acumulado do Nordeste (%)");
+    desenharCurva("NE", $("#g-ne-ano"), "Volume acumulado do Nordeste (% da capacidade dos reservatórios medidos)");
     $("#sub-dia").textContent = `Volume acumulado do Nordeste em ${ref.slice(0,5)} de cada ano, pela mesma curva encadeada da seção anterior.`;
     barrasFaixas($("#g-ne-faixas"), P.estados.map(e => ({rot:e.estado, n:e.n, sem_info:e.sem_info, faixas:e.faixas, nivel:e.nivel})));
 
@@ -2435,7 +2435,7 @@ function paginaNE(){
     ESC_UF.map(f => ({r:`Volume acumulado ${rotEsc(f)}`, cor:f.cor, area:true})).concat([
       {r:"Sem volume na data (sem medição de volume na janela de 30 dias)", cor:SEM_COR, area:true},
       {r:"Semiárido (delimitação do INSA)", cor:"#6B5B45", area:true}]));
-  $("#baixar-ne-ano").onclick = () => baixarPNG([$("#g-ne-ano svg"), $("#g-ne-cob svg")], "sar_ne_ao_longo_do_ano.png", "Nordeste · volume acumulado ao longo do ano", LEG_ANOS(anoAtual));
+  $("#baixar-ne-ano").onclick = () => baixarPNG([$("#g-ne-ano svg")], "sar_ne_ao_longo_do_ano.png", "Nordeste · volume acumulado ao longo do ano", LEG_ANOS(anoAtual));
   $("#baixar-ne-dia").onclick = () => baixarPNG([$("#g-ne-dia svg")], `sar_ne_mesmo_dia_${dataRef}.png`, `Nordeste · volume acumulado em ${dBR(dataRef).slice(0,5)} de cada ano`, LEG_ANOS(+dataRef.slice(0,4)));
   $("#baixar-ne-faixas").onclick = () => baixarPNG([$("#g-ne-faixas svg")], `sar_ne_faixas_${dataRef}.png`, `Nordeste · reservatórios por faixa de volume · ${dBR(dataRef)}`,
     ["restricao","atencao","normal"].map(k => ({r:ROT_FAIXA(k), cor:FX[k].cor, area:true})).concat([{r:ROT_NV_FAIXA, cor:COR_NV, area:true}, {r:ROT_FAIXA("sem"), cor:FX.sem.cor, area:true}]));
@@ -2699,13 +2699,11 @@ function curvaNa(g, iso, campo = "pct"){       // ponto da curva mais perto da d
   const k = a > 0 && Math.abs(D[a-1]-alvo) < Math.abs(D[a]-alvo) ? a-1 : a;
   return Math.abs(D[k]-alvo) <= Math.ceil(CURVA.passo/2) ? CURVA.series[g][campo][k] : null;
 }
-const ANOS_CURVA = 10;                          // anos sobrepostos em "Ao longo do ano" (como antes, com a série do portal)
-function desenharCurva(g, hostAno, hostCob, rotulo){
+const ANOS_CURVA = 5;                           // anos sobrepostos em "Ao longo do ano", como no SIN (Diego, 18/09/2026)
+function desenharCurva(g, hostAno, rotulo){
   const anos = [...new Set(CURVA.datas.filter((iso, i) => CURVA.series[g].pct[i]!=null).map(iso => +iso.slice(0,4)))].sort().slice(-ANOS_CURVA);
   const anoAtual = +NEd.data.slice(0,4);
   graficoCalendario(hostAno, curvaPontos(g), {anos, anoAtual, dec:1, unidade:"%", pct:true, marcaDia:dataRef, rotulo, maxVao:CURVA.passo*2});
-  graficoCalendario(hostCob, curvaPontos(g, "cob"), {anos, anoAtual, dec:0, unidade:"%", pct:true, marcaDia:dataRef, altura:190,
-    rotulo:"Capacidade com leitura na janela de 30 dias (% da capacidade do cadastro)", maxVao:CURVA.passo*2, semRotulos:true});
   return anos;
 }
 function mesmoDiaCurva(g, host, rotulo){
@@ -2714,7 +2712,9 @@ function mesmoDiaCurva(g, host, rotulo){
   graficoBarrasAnos(host, dados, {anoAtual:+dataRef.slice(0,4), dec:1, unidade:"%", pct:true, rotulo, legenda:"Volume acumulado"});
   return dados;
 }
-const TXT_CURVA = `Cálculo encadeado: a cada ${CURVA.passo} dias, cada reservatório entra com a leitura mais próxima, até ${NEd.limiar_dias} dias antes ou depois, e a variação entre dois pontos usa só os reservatórios medidos nos dois; a curva termina no número do dia de ${dBR(NEd.serie_ate)}. Assim a entrada ou a saída de um reservatório não aparece como variação de água. Abaixo, quanto da capacidade tinha leitura em cada data.`;
+// o que é o número, em uma frase (como no SIN); o método vai numa nota abaixo do gráfico
+const anosCurva = () => { const a1 = +NEd.serie_ate.slice(0,4); return `${a1 - ANOS_CURVA + 1} a ${a1}`; };
+const NOTA_CURVA = `Como a curva é calculada: a cada ${CURVA.passo} dias, cada reservatório entra com a leitura mais próxima, até ${NEd.limiar_dias} dias antes ou depois, e a variação entre dois pontos usa só os reservatórios medidos nos dois; a curva termina no número do dia de ${dBR(NEd.serie_ate)}. Assim, um reservatório que começa ou deixa de ser medido não aparece como água que entrou ou saiu.`;
 
 // minigráfico de 12 meses: eixo de tempo real, vão longo sem ligar, ponto na leitura usada
 function miniNE(host, pts, usado, dec, unid){
@@ -2793,9 +2793,9 @@ function paginaEstado(uf){
     ${curva ? `<section class="cartao secao" id="u-ano" aria-labelledby="t-u-ano">
       ${barraBaixar([["baixar-uf-ano", "PNG", "Baixar os gráficos como imagem"]])}
       <h2 id="t-u-ano"><small>${num("u-ano")}</small>Ao longo do ano</h2>
-      <p class="sub">Volume acumulado ${de} ${estado} em cada ano, sobreposto no mesmo calendário${misto ? " (só os reservatórios com volume)" : ""}. ${TXT_CURVA} O tracejado marca a data de referência.</p>
+      <p class="sub">Volume armazenado nos reservatórios ${de} ${estado} com medição, em % da capacidade deles${misto ? " (só os que têm volume; os só com nível não entram)" : ""}, de ${anosCurva()}. Passe o mouse para comparar o mesmo dia nos cinco anos; o tracejado marca a data de referência.</p>
       <div class="graf" id="g-uf-ano"></div>
-      <div class="graf cob" id="g-uf-cob"></div>
+      <p class="nota" style="margin:10px 0 0">${NOTA_CURVA}</p>
     </section>` : ""}
     ${curva ? `<section class="cartao secao" id="u-dia" aria-labelledby="t-u-dia">
       ${barraBaixar([["baixar-uf-dia", "PNG", "Baixar o gráfico como imagem"]])}
@@ -2871,7 +2871,7 @@ function paginaEstado(uf){
       : `${temVol ? "Reservatórios com volume pela faixa do volume; reservatórios" : "Reservatórios"} só com nível pela variação em 30 dias até a leitura usada, na data de referência de ${ref}.`) + " Passe o mouse para ler os valores.";
     mapa.atualizar([...vol, ...niv].filter(r => r.lat!=null));
     if (curva){
-      desenharCurva(uf, $("#g-uf-ano"), $("#g-uf-cob"), `Volume acumulado ${de} ${estado} (%)`);
+      desenharCurva(uf, $("#g-uf-ano"), `Volume acumulado ${de} ${estado} (% da capacidade dos reservatórios medidos)`);
       $("#sub-u-dia").textContent = `Volume acumulado ${de} ${estado} em ${ref.slice(0,5)} de cada ano, pela mesma curva encadeada da seção anterior.`;
       mesmoDiaCurva(uf, $("#g-uf-dia"), `Volume acumulado ${de} ${estado} (%) em ${ref.slice(0,5)}`);
     }
@@ -2894,7 +2894,7 @@ function paginaEstado(uf){
 
   const u = uf.toLowerCase();
   if (curva){
-    $("#baixar-uf-ano").onclick = () => baixarPNG([$("#g-uf-ano svg"), $("#g-uf-cob svg")], `sar_${u}_ao_longo_do_ano.png`, `${estado} · volume acumulado ao longo do ano`, LEG_ANOS(anoAtual));
+    $("#baixar-uf-ano").onclick = () => baixarPNG([$("#g-uf-ano svg")], `sar_${u}_ao_longo_do_ano.png`, `${estado} · volume acumulado ao longo do ano`, LEG_ANOS(anoAtual));
     $("#baixar-uf-dia").onclick = () => baixarPNG([$("#g-uf-dia svg")], `sar_${u}_mesmo_dia_${dataRef}.png`, `${estado} · volume acumulado em ${dBR(dataRef).slice(0,5)} de cada ano`, LEG_ANOS(+dataRef.slice(0,4)));
   }
   $("#baixar-uf-hist").onclick = () => baixarPNG([$("#g-uf-hist svg")], `sar_${u}_historico_monitoramento.png`);
