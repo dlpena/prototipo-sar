@@ -2967,8 +2967,7 @@ function mapaResNE(host, ufs, op = {}){
     if (semi){ controle.addOverlay(semi, "Semiárido (INSA)"); camadas.push(semi); }
     // enquadra pelos reservatórios, não pelos estados (só na primeira vez: mudar a data não mexe no zoom)
     const pts = dados.filter(r => r.lat!=null).map(r => [r.lat, r.lon]);
-    if (!ajustado && pts.length){ const cx = host.querySelector(".leaflet-control-layers"), dir = cx && !op.recolhido && host.clientWidth > 700 ? cx.offsetWidth + 24 : 14;
-      mapa.fitBounds(L.latLngBounds(pts), {paddingTopLeft:[14,14], paddingBottomRight:[Math.max(14, dir/2),14], maxZoom:9}); ajustado = true; }
+    if (!ajustado && pts.length){ mapa.fitBounds(L.latLngBounds(pts), {paddingTopLeft:[14,14], paddingBottomRight:[14,14], maxZoom:9}); ajustado = true; }
   }
   claro.on("tileerror", () => { if (!host.dataset.aviso){ host.dataset.aviso = 1; host.insertAdjacentHTML("afterend", '<p class="nota">Mapa-base não carregou neste ambiente: ficam só os pontos e o contorno.</p>'); } });
   return {atualizar, mapa};
