@@ -318,8 +318,9 @@ body.na-inicio #conteudo{padding-top:22px}
 /* a tabela dos estados tem seis colunas e pede mais largura que o mapa: sem isso aparecia barra de
    rolagem lateral na tabela, contra a diretriz de não ter rolagem interna (Diego) */
 .grade-ne{display:grid;grid-template-columns:minmax(0,.84fr) minmax(0,1.16fr);gap:22px;align-items:start}
+.grade-ne>#mapa-ne{align-self:center}
 
-#mapa-ne svg{display:block;width:100%;height:auto;max-height:680px}
+#mapa-ne svg{display:block;width:100%;height:auto;max-height:760px}
 #mapa-ne .uf-ne{transition:fill-opacity .12s,fill .12s}
 #mapa-ne .uf-ne:hover,#mapa-ne .uf-ne.acesa{fill-opacity:1;stroke:#283377;stroke-width:1.6;stroke-linejoin:round}
 #mapa-ne .uf-ne.apagada{fill-opacity:.3}
@@ -2511,6 +2512,9 @@ function mapaNE(host){
   svg.append(gRot);
   svg.addEventListener("pointerleave", () => acenderUF(null));   // como no mapa das bacias do SIN
   host.innerHTML = ""; host.append(svg);
+  // viewBox justo ao desenho (o quadro de origem tem margem larga dos lados)
+  try { const b = svg.getBBox(), f = 8;
+    if (b.width > 0) svg.setAttribute("viewBox", `${b.x - f} ${b.y - f} ${b.width + 2*f} ${b.height + 2*f}`); } catch (e) {}
   const atualizar = () => SIT.estados.forEach(e => {
     const p = areas[e.uf];
     p.setAttribute("fill", corUF(e.volume_pct));
@@ -3206,7 +3210,7 @@ function paginaFichaNE(cod){
   const Dc = F.descartes, Ni = F.nao_informados;
   $("#fontes-f").innerHTML = `Fontes: ${esc(NEd.fontes.ficha_sar)}${soNivel ? "; " + esc(NEd.fontes.ficha_nivel) : ""}; ${esc(NEd.fontes.regra)}. ` +
     `Crítica das leituras antes de exibir: na cota, ${qtd(Dc.cota.length, "descartada", "descartadas")} e ${fint(Ni.cota)} sem cota informada (zero ou vazia); ` +
-    `no volume, ${qtd(Dc.volume.length, "descartada", "descartadas")} e ${fint(Ni.volume)} com volume zero e cota informada (volume não informado)` +
+    `no volume, ${qtd(Dc.volume.length, "descartada", "descartadas")}` +
     `${soNivel ? `; no nível, ${qtd(F.nivel.descartes.length, "descartada", "descartadas")}` : ""}. Vizinhos no mapa: ${esc(NEd.fontes.medicoes)}.`;
 
   const aplicar = () => { situacao(); mapaVizinhos(); desenhar(); mesmoDia(); anoAnos(); };
