@@ -110,6 +110,7 @@ main{padding-block:26px 60px}
 .secao>h2,.secao .lado>h2{font-size:19px;margin:0 0 2px;color:var(--ana);font-weight:700}
 .secao>h2 small,.secao .lado>h2 small{font-size:13px;color:var(--apagado);font-weight:400;margin-right:8px}
 .secao>p.sub{margin:0 0 14px;color:var(--tinta-2);font-size:14px}
+.sub .dica{display:block;margin-top:3px}
 .explorar{margin-top:0}
 .rio{fill:none;stroke:#5F8FC0;stroke-width:.9;stroke-linejoin:round;stroke-linecap:round;pointer-events:none}
 .rio.apagado,.rio.apagada{opacity:.15}
@@ -960,7 +961,7 @@ function paginaSIN(){
     <section class="cartao secao" id="s-bacias" aria-labelledby="t-bacias">
       ${barraBaixar([["baixar-mapa-sin", "PNG", "Baixar o mapa das bacias como imagem"]])}
       <h2 id="t-bacias"><small>1</small>Bacias</h2>
-      <p class="sub">As 22 bacias usadas pelo ONS. Passe o mouse para destacar e clique para abrir a página da bacia.</p>
+      <p class="sub">As 22 bacias usadas pelo ONS.<span class="dica">Passe o mouse para destacar e clique para abrir a página da bacia.</span></p>
     <div class="explorar">
       <div class="mapa-caixa" style="padding:0">
         <div id="mapa-sin" style="position:relative"></div>
@@ -1006,7 +1007,7 @@ function paginaSIN(){
     <section class="cartao secao" id="s-ano" aria-labelledby="t-ano">
       ${barraBaixar([["baixar-equiv-png", "PNG", "Baixar o gráfico como imagem"]])}
       <h2 id="t-ano"><small>3</small>Ao longo do ano</h2>
-      <p class="sub">Volume útil do reservatório equivalente dia a dia, nos últimos cinco anos. Passe o mouse para comparar o mesmo dia nos cinco anos.</p>
+      <p class="sub">Volume útil do reservatório equivalente dia a dia, nos últimos cinco anos.<span class="dica">Passe o mouse para comparar o mesmo dia nos cinco anos.</span></p>
       <div class="graf" id="g-equiv"></div>
     </section>
 
@@ -1020,7 +1021,7 @@ function paginaSIN(){
 
     <section class="cartao secao" id="s-usinas" aria-labelledby="t-usinas">
       <h2 id="t-usinas"><small>5</small>Mapa das usinas</h2>
-      <p class="sub">Cada usina acompanhada, com os dados do último dia disponível. Passe o mouse ou clique num símbolo para ler o valor; use as camadas para escolher o mapa-base e os grupos.</p>
+      <p class="sub">Cada usina acompanhada, com os dados do último dia disponível.<span class="dica">Passe o mouse ou clique num símbolo para ler o valor; use as camadas para escolher o mapa-base e os grupos.</span></p>
       ${barraBaixar([["baixar-kmz", "KMZ", "Baixar as usinas visíveis em KMZ (Google Earth)"]])}
       <p class="resumo-filtros" id="resumo-filtros"></p>
       <div id="mapa-situacao"></div>
@@ -1238,7 +1239,7 @@ function paginaGrande(){
     <section class="cartao secao tabela-bacia" id="g-tab" aria-labelledby="t-tab-g">
       ${barraBaixar([["baixar-csv", "CSV", "Baixar a tabela do dia em CSV"], ["baixar-pdf", "PDF", "Baixar a tabela do dia em PDF"]])}
       <h2 id="t-tab-g"><small>2</small>Usinas em ${dBR(D.data)}</h2>
-      <p class="sub">De montante para jusante. Clique numa usina para abrir a ficha. O minigráfico mostra os 30 dias até o dia escolhido, da variável selecionada, a mesma em todas as linhas.</p>
+      <p class="sub">De montante para jusante. O minigráfico mostra os 30 dias até o dia escolhido, da variável selecionada, a mesma em todas as linhas.<span class="dica">Clique numa usina para abrir a ficha.</span></p>
       <div class="linha-mapa"><div class="ferramentas"><label>Dia <input type="date" id="dia-bacia" value="${D.data}" min="${G.res[0].serie[0].data}" max="${D.data}"></label><span class="nota" id="aviso-dia"></span></div></div>
       <div class="tab-box"><table>
         <thead><tr><th>Usina</th><th class="r">Afluente</th><th class="r">Defluente</th><th class="r">Turbinada</th><th class="r">Vertida</th><th class="r">Nível</th><th class="r">Volume útil</th>
@@ -1556,7 +1557,7 @@ function paginaFicha(){
     </nav>
     <section class="cartao secao" id="f-sit" aria-labelledby="t-sit">
       <h2 id="t-sit"><small>1</small>Situação em <span id="dia-sit-txt">${dBR(ult.data)}</span></h2>
-      <p class="sub">Base diária. O padrão é o último dia fechado; escolha outro dia para ver a situação daquela data. Ao lado, a usina e as vizinhas da cascata do Grande.</p>
+      <p class="sub">Base diária. O padrão é o último dia fechado. Ao lado, a usina e as vizinhas da cascata do Grande.<span class="dica">Escolha outro dia para ver a situação daquela data.</span></p>
       <div class="linha-mapa"><div class="ferramentas"><label>Dia <input type="date" id="dia-sit" value="${ult.data}" min="${DI[0].data}" max="${ult.data}"></label><span class="nota" id="aviso-sit"></span></div></div>
       <div class="sit-grid">
         <div class="valores" id="valores-ficha"></div>
@@ -1566,7 +1567,7 @@ function paginaFicha(){
     <section class="cartao secao" id="f-graf" aria-labelledby="t-graf">
       ${barraBaixar([["baixar-serie", "CSV", "Baixar a série do período em CSV"], ["baixar-graf-png", "PNG", "Baixar os dois gráficos como imagem"]])}
       <h2 id="t-graf"><small>2</small>Gráficos</h2>
-      <p class="sub">Escolha a base, o período e as variáveis. Vazões no gráfico de cima; nível ou volume útil no de baixo, no mesmo eixo de tempo. Passe o mouse para ler os valores nos dois gráficos.</p>
+      <p class="sub">Vazões no gráfico de cima; nível ou volume útil no de baixo, no mesmo eixo de tempo.<span class="dica">Escolha a base, o período e as variáveis; passe o mouse para ler os valores nos dois gráficos.</span></p>
       <div class="controles painel">
         <fieldset><legend>Base</legend><label><input type="radio" name="base" value="dia" checked> Diária</label><label><input type="radio" name="base" value="hora"> Horária</label></fieldset>
         <fieldset class="largo"><legend>Período</legend><span id="presets" class="presets"></span><span class="datas"><label>de <input type="date" id="g-de"></label><label>até <input type="date" id="g-ate"></label></span></fieldset>
@@ -1581,7 +1582,7 @@ function paginaFicha(){
     <section class="cartao secao" id="f-dia" aria-labelledby="t-dia">
       ${barraBaixar([["baixar-dia-png", "PNG", "Baixar o gráfico como imagem"]])}
       <h2 id="t-dia"><small>3</small>Mesmo dia em outros anos</h2>
-      <p class="sub">O valor de um mesmo dia do calendário em cada ano da série diária. Escolha o dia e a variável.</p>
+      <p class="sub">O valor de um mesmo dia do calendário em cada ano da série diária.<span class="dica">Escolha o dia e a variável.</span></p>
       <div class="controles"><fieldset><legend>Dia</legend><input type="date" id="dia-ref-f" value="${ult.data}" min="${DI[0].data}" max="${ult.data}"></fieldset>
         <fieldset><legend>Variável</legend><select id="var-dia">${["vu","cota"].map(k => `<option value="${k}">${VARS[k].r} (${VARS[k].u})</option>`).join("")}</select></fieldset></div>
       <div class="graf" id="g-dia"></div>
@@ -1589,7 +1590,7 @@ function paginaFicha(){
     <section class="cartao secao" id="f-ano" aria-labelledby="t-ano">
       ${barraBaixar([["baixar-ano-png", "PNG", "Baixar o gráfico como imagem"]])}
       <h2 id="t-ano"><small>4</small>Ano contra anos anteriores</h2>
-      <p class="sub">A série diária de cada ano sobreposta no mesmo calendário. O ano corrente fica em destaque; clique nos anos para incluir ou tirar, até ${MAX_ANOS} ao mesmo tempo.</p>
+      <p class="sub">A série diária de cada ano sobreposta no mesmo calendário. O ano corrente fica em destaque.<span class="dica">Clique nos anos para incluir ou tirar, até ${MAX_ANOS} ao mesmo tempo.</span></p>
       <div class="controles"><fieldset><legend>Variável</legend><select id="var-ano">${["vu","cota"].map(k => `<option value="${k}">${VARS[k].r}${k==="vu" ? " (%)" : " (m)"}</option>`).join("")}</select></fieldset>
         <fieldset class="anos"><legend>Anos <span class="nota" id="nota-anos"></span></legend><span id="anos-chips"></span></fieldset></div>
       <div class="graf" id="g-ano"></div>
@@ -2307,7 +2308,7 @@ function paginaNE(){
     <section class="cartao secao" id="n-estados" aria-labelledby="t-n-estados">
       ${barraBaixar([["baixar-ne-mapa", "PNG", "Baixar o mapa dos estados como imagem"], ["baixar-ne-csv", "CSV", "Baixar a tabela dos estados em CSV"]])}
       <h2 id="t-n-estados"><small>1</small>Estados</h2>
-      <p class="sub">Volume acumulado de cada estado na data de referência. Passe o mouse no mapa ou na tabela para ligar um ao outro; clique para abrir o estado.</p>
+      <p class="sub">Volume acumulado de cada estado na data de referência.<span class="dica">Passe o mouse no mapa ou na tabela para ligar um ao outro; clique para abrir o estado.</span></p>
       ${legendaEscalaUF()}
       <div class="grade-ne">
         <div id="mapa-ne" style="position:relative"></div>
@@ -2335,7 +2336,7 @@ function paginaNE(){
     <section class="cartao secao" id="n-ano" aria-labelledby="t-n-ano">
       ${barraBaixar([["baixar-ne-ano", "PNG", "Baixar o gráfico como imagem"]])}
       <h2 id="t-n-ano"><small>3</small>Ao longo do ano</h2>
-      <p class="sub">Volume armazenado nos reservatórios do Nordeste com medição, em % da capacidade deles, nos últimos cinco anos. Passe o mouse para comparar o mesmo dia nos cinco anos; o tracejado marca a data de referência.</p>
+      <p class="sub">Volume armazenado nos reservatórios do Nordeste com medição, em % da capacidade deles, nos últimos cinco anos; o tracejado marca a data de referência.<span class="dica">Passe o mouse para comparar o mesmo dia nos cinco anos.</span></p>
       <div class="graf" id="g-ne-ano"></div>
       <p class="nota" style="margin:10px 0 0">${NOTA_CURVA}</p>
     </section>
@@ -2414,7 +2415,7 @@ function paginaNE(){
     $("#sub-dia").textContent = `Volume acumulado do Nordeste em ${ref.slice(0,5)} de cada ano, pela mesma curva encadeada da seção anterior.`;
     barrasFaixas($("#g-ne-faixas"), P.estados.map(e => ({rot:e.estado, n:e.n, sem_info:e.sem_info, faixas:e.faixas, nivel:e.nivel})));
 
-    $("#sub-mapa").textContent = `Cada reservatório com volume pela faixa do seu volume em ${ref}, e os só com nível pela variação em 30 dias. Os sem informação aparecem em cinza. O tamanho do círculo acompanha a capacidade; passe o mouse para ler o valor e a data da leitura.`;
+    $("#sub-mapa").innerHTML = `Cada reservatório com volume pela faixa do seu volume em ${ref}, e os só com nível pela variação em 30 dias. Os sem informação aparecem em cinza. O tamanho do círculo acompanha a capacidade.<span class="dica">Passe o mouse para ler o valor e a data da leitura.</span>`;
     mapaRes.atualizar(comCoord.concat(P.niveis.filter(r => r.lat!=null)));
     $("#nota-mapa").textContent = `${fint(lista.length - comCoord.length)} dos ${fint(lista.length)} reservatórios do módulo não têm coordenada no cadastro e não aparecem no mapa. Mapa-base e imagem de satélite vêm de serviços externos; onde a rede os bloqueia, ficam só os pontos e os contornos.`;
     $("#fontes-ne").innerHTML = `Fontes: ${esc(NEd.fontes.medicoes)}; ${esc(NEd.fontes.resumo)}; ${esc(NEd.fontes.equivalente)}; ${esc(NEd.fontes.coordenadas)}; ${esc(NEd.fontes.regra)}. ` +
@@ -2786,14 +2787,14 @@ function paginaEstado(uf){
     <section class="cartao secao tabela-bacia" id="u-tab" aria-labelledby="t-u-tab">
       ${barraBaixar([["baixar-uf-csv", "CSV", "Baixar a tabela em CSV"], ["baixar-uf-pdf", "PDF", "Baixar a tabela em PDF"]])}
       <h2 id="t-u-tab"><small>${num("u-tab")}</small>Reservatórios</h2>
-      <p class="sub">${temVol ? "Da maior para a menor capacidade. " : ""}Clique no cabeçalho para ordenar. Cada reservatório entra com a leitura mais próxima da data de referência, até ${NEd.limiar_dias} dias antes ou depois, com a data e a distância. O minigráfico mostra os 12 meses da série de cada um, na escala própria da linha, com a leitura usada em vermelho; o detalhe fica na ficha.</p>
+      <p class="sub">${temVol ? "Da maior para a menor capacidade. " : ""}Cada reservatório entra com a leitura mais próxima da data de referência, até ${NEd.limiar_dias} dias antes ou depois, com a data e a distância. O minigráfico mostra os 12 meses da série de cada um, na escala própria da linha, com a leitura usada em vermelho; o detalhe fica na ficha.<span class="dica">Clique no cabeçalho para ordenar.</span></p>
       ${temVol ? (misto ? `<h3 class="sub-bloco">Com volume<small>${fint(vol.length)} reservatórios · entram no volume acumulado</small></h3>` : "") + tabVol : ""}
       ${temNiv ? (misto ? `<h3 class="sub-bloco">Só com nível<small>${fint(niv.length)} reservatórios · sem curva cota-volume validada</small></h3>` : "") + tabNiv : ""}
     </section>
     ${curva ? `<section class="cartao secao" id="u-ano" aria-labelledby="t-u-ano">
       ${barraBaixar([["baixar-uf-ano", "PNG", "Baixar os gráficos como imagem"]])}
       <h2 id="t-u-ano"><small>${num("u-ano")}</small>Ao longo do ano</h2>
-      <p class="sub">Volume armazenado nos reservatórios ${de} ${estado} com medição, em % da capacidade deles${misto ? " (só os que têm volume; os só com nível não entram)" : ""}, nos últimos cinco anos. Passe o mouse para comparar o mesmo dia nos cinco anos; o tracejado marca a data de referência.</p>
+      <p class="sub">Volume armazenado nos reservatórios ${de} ${estado} com medição, em % da capacidade deles${misto ? " (só os que têm volume; os só com nível não entram)" : ""}, nos últimos cinco anos; o tracejado marca a data de referência.<span class="dica">Passe o mouse para comparar o mesmo dia nos cinco anos.</span></p>
       <div class="graf" id="g-uf-ano"></div>
       <p class="nota" style="margin:10px 0 0">${NOTA_CURVA}</p>
     </section>` : ""}
@@ -2866,9 +2867,9 @@ function paginaEstado(uf){
     if (temNiv){ const com = niv.filter(r => !r.sem_info);
       partes.push(`<b>${fint(com.length)}</b> de ${fint(niv.length)} com leitura de nível na janela · ${qtd(com.filter(r => r.tend==="sobe").length, "subiu", "subiram")} e ${qtd(com.filter(r => r.tend==="desce").length, "desceu", "desceram")} em 30 dias`); }
     $("#carimbo-uf").innerHTML = partes.join(" · ");
-    $("#sub-u-mapa").textContent = (temVol && !temNiv
+    $("#sub-u-mapa").innerHTML = (temVol && !temNiv
       ? `Cada reservatório pela faixa do seu volume em ${ref}. Os sem informação aparecem em cinza.`
-      : `${temVol ? "Reservatórios com volume pela faixa do volume; reservatórios" : "Reservatórios"} só com nível pela variação em 30 dias até a leitura usada, na data de referência de ${ref}.`) + " Passe o mouse para ler os valores.";
+      : `${temVol ? "Reservatórios com volume pela faixa do volume; reservatórios" : "Reservatórios"} só com nível pela variação em 30 dias até a leitura usada, na data de referência de ${ref}.`) + '<span class="dica">Passe o mouse para ler os valores.</span>';
     mapa.atualizar([...vol, ...niv].filter(r => r.lat!=null));
     if (curva){
       desenharCurva(uf, $("#g-uf-ano"), `Volume acumulado ${de} ${estado} (% da capacidade dos reservatórios medidos)`);
@@ -3016,14 +3017,14 @@ function paginaFichaNE(cod){
     ${soNivel ? `<div class="aviso-nivel"><p><b>Como ler.</b> O nível é a cota da régua lida pelo observador, registrada no HidroInfoAna e ainda não validada pela ANA: mostra se o açude subiu ou desceu, não quanta água há. O volume que aparece à parte é o que o SAR registrou até ${dBR(ultVol.iso)}, quando o acompanhamento de volume parou. As duas séries vêm de fontes e réguas diferentes e não são emendadas.</p></div>` : ""}
     <section class="cartao secao" id="fn-sit" aria-labelledby="t-fn-sit">
       <h2 id="t-fn-sit"><small>1</small>Situação em <span id="fn-dia-txt"></span></h2>
-      <p class="sub">Cada valor é a leitura mais próxima da data de referência, até ${LIM} dias antes ou depois, com a data da leitura. Ao lado, o açude (círculo azul) e os vizinhos da bacia ${esc(caso(F.bacia || ""))}; clique num vizinho para abrir a ficha dele.</p>
+      <p class="sub">Cada valor é a leitura mais próxima da data de referência, até ${LIM} dias antes ou depois, com a data da leitura. Ao lado, o açude (círculo azul) e os vizinhos da bacia ${esc(caso(F.bacia || ""))}.<span class="dica">Clique num vizinho para abrir a ficha dele.</span></p>
       <p class="nota" id="aviso-sit-ne"></p>
       <div class="sit-grid"><div class="valores" id="valores-ficha"></div><div id="mapa-ficha"></div></div>
     </section>
     <section class="cartao secao" id="fn-graf" aria-labelledby="t-fn-graf">
       ${barraBaixar([["baixar-f-csv", "CSV", "Baixar a série do período em CSV"], ["baixar-f-png", "PNG", "Baixar o gráfico como imagem"]])}
       <h2 id="t-fn-graf"><small>2</small>Gráfico</h2>
-      <p class="sub">${soNivel ? "Nível na régua (HidroInfoAna) e, abaixo, o volume que o SAR teve, no mesmo período." : "Escolha o período e a variável."} Pontos nas datas reais das leituras; vão de mais de ${VAO_MAX} dias não é ligado. Círculo vazado vermelho: leitura descartada pela crítica, fora da linha. Tracejado vermelho: data de referência.</p>
+      <p class="sub">${soNivel ? "Nível na régua (HidroInfoAna) e, abaixo, o volume que o SAR teve, no mesmo período. " : ""}Pontos nas datas reais das leituras; vão de mais de ${VAO_MAX} dias não é ligado. Círculo vazado vermelho: leitura descartada pela crítica, fora da linha. Tracejado vermelho: data de referência.${soNivel ? "" : '<span class="dica">Escolha o período e a variável.</span>'}</p>
       <div class="controles painel">
         <fieldset class="largo"><legend>Período</legend><span id="presets" class="presets"></span><span class="datas"><label>de <input type="date" id="g-de"></label><label>até <input type="date" id="g-ate"></label></span></fieldset>
         ${varsGraf.length ? `<fieldset><legend>Variável</legend>${varsGraf.map((k,i) => `<label><input type="radio" name="var-f" value="${k}"${i===0 ? " checked" : ""}> <i class="sw" style="border-color:${VNE[k].cor}"></i>${VNE[k].r} (${VNE[k].u})</label>`).join("")}</fieldset>` : ""}
@@ -3044,7 +3045,7 @@ function paginaFichaNE(cod){
     <section class="cartao secao" id="fn-ano" aria-labelledby="t-fn-ano">
       ${barraBaixar([["baixar-f-ano", "PNG", "Baixar o gráfico como imagem"]])}
       <h2 id="t-fn-ano"><small>4</small>Ano contra anos anteriores</h2>
-      <p class="sub">As leituras de cada ano sobrepostas no mesmo calendário, nas datas reais. Clique nos anos para incluir ou tirar, até ${MAX_ANOS} ao mesmo tempo.</p>
+      <p class="sub">As leituras de cada ano sobrepostas no mesmo calendário, nas datas reais.<span class="dica">Clique nos anos para incluir ou tirar, até ${MAX_ANOS} ao mesmo tempo.</span></p>
       <div class="controles"><fieldset><legend>Variável</legend><select id="var-ano-f">${varsComp.map(opcao).join("")}</select></fieldset>
         <fieldset class="anos"><legend>Anos <span class="nota" id="nota-anos-f"></span></legend><span id="anos-chips-f"></span></fieldset></div>
       <div class="graf" id="g-f-ano"></div>
