@@ -103,13 +103,13 @@ main{padding-block:26px 60px}
 .baixar button:focus-visible{outline:2px solid var(--ana-medio);outline-offset:1px}
 .baixar svg{width:13px;height:13px;flex:none;opacity:.8}
 .baixar button:hover svg{opacity:1}
-@supports selector(:has(*)){.secao:has(.baixar)>h2,.secao:has(.baixar)>p.sub{padding-right:120px}}
+@supports selector(:has(*)){.secao:has(.baixar)>h2{padding-right:120px}}
 @media (max-width:640px){.baixar{position:static;justify-content:flex-end;margin:-6px 0 6px}
-  @supports selector(:has(*)){.secao:has(.baixar)>h2,.secao:has(.baixar)>p.sub{padding-right:0}}}
+  @supports selector(:has(*)){.secao:has(.baixar)>h2{padding-right:0}}}
 
 .secao>h2,.secao .lado>h2{font-size:19px;margin:0 0 2px;color:var(--ana);font-weight:700}
 .secao>h2 small,.secao .lado>h2 small{font-size:13px;color:var(--apagado);font-weight:400;margin-right:8px}
-.secao>p.sub{margin:0 0 14px;color:var(--tinta-2);font-size:14px;max-width:110ch}
+.secao>p.sub{margin:0 0 14px;color:var(--tinta-2);font-size:14px}
 .explorar{margin-top:0}
 .rio{fill:none;stroke:#5F8FC0;stroke-width:.9;stroke-linejoin:round;stroke-linecap:round;pointer-events:none}
 .rio.apagado,.rio.apagada{opacity:.15}
@@ -1006,7 +1006,7 @@ function paginaSIN(){
     <section class="cartao secao" id="s-ano" aria-labelledby="t-ano">
       ${barraBaixar([["baixar-equiv-png", "PNG", "Baixar o gráfico como imagem"]])}
       <h2 id="t-ano"><small>3</small>Ao longo do ano</h2>
-      <p class="sub">Volume útil do reservatório equivalente dia a dia, de ${Object.keys(S)[0].slice(0,4)} a ${ult.slice(0,4)}. Passe o mouse para comparar o mesmo dia nos cinco anos.</p>
+      <p class="sub">Volume útil do reservatório equivalente dia a dia, nos últimos cinco anos. Passe o mouse para comparar o mesmo dia nos cinco anos.</p>
       <div class="graf" id="g-equiv"></div>
     </section>
 
@@ -1020,7 +1020,7 @@ function paginaSIN(){
 
     <section class="cartao secao" id="s-usinas" aria-labelledby="t-usinas">
       <h2 id="t-usinas"><small>5</small>Mapa das usinas</h2>
-      <p class="sub">Cada usina acompanhada, com os dados de ${dBR(D.data)}. Passe o mouse ou clique num símbolo para ler o valor; use as camadas para escolher o mapa-base e os grupos.</p>
+      <p class="sub">Cada usina acompanhada, com os dados do último dia disponível. Passe o mouse ou clique num símbolo para ler o valor; use as camadas para escolher o mapa-base e os grupos.</p>
       ${barraBaixar([["baixar-kmz", "KMZ", "Baixar as usinas visíveis em KMZ (Google Earth)"]])}
       <p class="resumo-filtros" id="resumo-filtros"></p>
       <div id="mapa-situacao"></div>
@@ -2335,7 +2335,7 @@ function paginaNE(){
     <section class="cartao secao" id="n-ano" aria-labelledby="t-n-ano">
       ${barraBaixar([["baixar-ne-ano", "PNG", "Baixar o gráfico como imagem"]])}
       <h2 id="t-n-ano"><small>3</small>Ao longo do ano</h2>
-      <p class="sub">Volume armazenado nos reservatórios do Nordeste com medição, em % da capacidade deles, de ${anosCurva()}. Passe o mouse para comparar o mesmo dia nos cinco anos; o tracejado marca a data de referência.</p>
+      <p class="sub">Volume armazenado nos reservatórios do Nordeste com medição, em % da capacidade deles, nos últimos cinco anos. Passe o mouse para comparar o mesmo dia nos cinco anos; o tracejado marca a data de referência.</p>
       <div class="graf" id="g-ne-ano"></div>
       <p class="nota" style="margin:10px 0 0">${NOTA_CURVA}</p>
     </section>
@@ -2713,8 +2713,8 @@ function mesmoDiaCurva(g, host, rotulo){
   return dados;
 }
 // o que é o número, em uma frase (como no SIN); o método vai numa nota abaixo do gráfico
-const anosCurva = () => { const a1 = +NEd.serie_ate.slice(0,4); return `${a1 - ANOS_CURVA + 1} a ${a1}`; };
-const NOTA_CURVA = `Como a curva é calculada: a cada ${CURVA.passo} dias, cada reservatório entra com a leitura mais próxima, até ${NEd.limiar_dias} dias antes ou depois, e a variação entre dois pontos usa só os reservatórios medidos nos dois; a curva termina no número do dia de ${dBR(NEd.serie_ate)}. Assim, um reservatório que começa ou deixa de ser medido não aparece como água que entrou ou saiu.`;
+// (anos da curva: ANOS_CURVA; o texto diz "últimos cinco anos", sem período fixo, Diego 18/09/2026)
+const NOTA_CURVA = `Como a curva é calculada: a cada ${CURVA.passo} dias, cada reservatório entra com a leitura mais próxima, até ${NEd.limiar_dias} dias antes ou depois, e a variação entre dois pontos usa só os reservatórios medidos nos dois; a curva termina no número do dia da última medição. Assim, um reservatório que começa ou deixa de ser medido não aparece como água que entrou ou saiu.`;
 
 // minigráfico de 12 meses: eixo de tempo real, vão longo sem ligar, ponto na leitura usada
 function miniNE(host, pts, usado, dec, unid){
@@ -2793,7 +2793,7 @@ function paginaEstado(uf){
     ${curva ? `<section class="cartao secao" id="u-ano" aria-labelledby="t-u-ano">
       ${barraBaixar([["baixar-uf-ano", "PNG", "Baixar os gráficos como imagem"]])}
       <h2 id="t-u-ano"><small>${num("u-ano")}</small>Ao longo do ano</h2>
-      <p class="sub">Volume armazenado nos reservatórios ${de} ${estado} com medição, em % da capacidade deles${misto ? " (só os que têm volume; os só com nível não entram)" : ""}, de ${anosCurva()}. Passe o mouse para comparar o mesmo dia nos cinco anos; o tracejado marca a data de referência.</p>
+      <p class="sub">Volume armazenado nos reservatórios ${de} ${estado} com medição, em % da capacidade deles${misto ? " (só os que têm volume; os só com nível não entram)" : ""}, nos últimos cinco anos. Passe o mouse para comparar o mesmo dia nos cinco anos; o tracejado marca a data de referência.</p>
       <div class="graf" id="g-uf-ano"></div>
       <p class="nota" style="margin:10px 0 0">${NOTA_CURVA}</p>
     </section>` : ""}
