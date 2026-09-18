@@ -414,6 +414,7 @@ td .rio{display:block;font:12px var(--narrow);color:var(--apagado)}
 .simb{display:inline-block;vertical-align:middle;margin-right:8px}
 .diagrama .cx{overflow-x:auto}
 #diag-grande svg{display:block;min-width:980px;width:100%;height:auto}
+#diag-grande svg.vert{min-width:0;max-width:460px}
 .no-diag{cursor:pointer}
 .no-diag text{font-family:var(--narrow)}
 .toast{position:fixed;left:50%;bottom:calc(22px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);background:var(--ana);color:#fff;padding:11px 18px;border-radius:2px;font-size:14px;z-index:60;box-shadow:0 6px 20px rgba(20,42,102,.3);max-width:calc(100vw - 32px)}
@@ -1226,10 +1227,10 @@ function paginaGrande(){
     <section class="cartao secao diagrama" id="g-diag" aria-labelledby="t-diag">
       ${barraBaixar([["baixar-diag", "PNG", "Baixar o diagrama como imagem"]])}
       <h2 id="t-diag"><small>3</small>Diagrama da cascata</h2>
-      <p class="sub">Da cabeceira (direita) à foz no rio Paraná (esquerda), como no mapa.</p>
+      <p class="sub" id="sub-diag">Da cabeceira (direita) à foz no rio Paraná (esquerda), como no mapa.</p>
       <div class="legenda" style="margin-bottom:4px">
-        <span>${simbolo("res",14)}com reservatório: ponta voltada para montante, volume útil abaixo</span>
-        <span>${simbolo("fio",14)}a fio d'água</span><span>número acima: defluente do dia (m³/s)</span>
+        <span>${simbolo("res",14)}com reservatório: ponta voltada para montante, com o volume útil (VU)</span>
+        <span>${simbolo("fio",14)}a fio d'água</span><span>número: defluente do dia (m³/s)</span>
       </div>
       <div class="cx" id="diag-grande"></div>
     </section>`;
@@ -1403,7 +1404,15 @@ function corChuva(mm, max){
   const f = (t-a[0])/((b[0]-a[0])||1);
   return `rgb(${a[1].map((x,i) => Math.round(x+(b[1][i]-x)*f)).join(",")})`;
 }
+const DIAG_MIN = 980;   // largura do diagrama horizontal; abaixo disso, vertical
 function diagramaGrande(host, lista){
+  host._lista = lista;
+  const sub = $("#sub-diag");
+  if (host.clientWidth && host.clientWidth < DIAG_MIN){
+    if (sub) sub.textContent = "Da cabeceira (em cima) à foz no rio Paraná (embaixo). O rio Pardo entra no Grande entre Porto Colômbia e Marimbondo.";
+    return diagramaGrandeVertical(host, lista);
+  }
+  if (sub) sub.textContent = "Da cabeceira (direita) à foz no rio Paraná (esquerda), como no mapa.";
   // eixo principal: rio Grande (ordem da API = montante→jusante); ramo do Pardo entra entre Porto Colômbia e Marimbondo (diagrama esquemático do SAR)
   const principal = lista.filter(r => !["CACONDE","E. DA CUNHA","LIMOEIRO"].includes(r.nome));
   const pardo = lista.filter(r => ["CACONDE","E. DA CUNHA","LIMOEIRO"].includes(r.nome));
@@ -1440,6 +1449,52 @@ function diagramaGrande(host, lista){
   pardo.forEach((r,k) => no(r, xPd(k), yP));
   host.append(svg);
 }
+
+function diagramaGrandeVertical(host, lista){
+  const PARDO = ["CACONDE","E. DA CUNHA","LIMOEIRO"];
+  const principal = lista.filter(r => !PARDO.includes(r.nome)), pardo = lista.filter(r => PARDO.includes(r.nome));
+  const kJ = principal.findIndex(r => r.nome==="MARIMBONDO");
+  // linhas de cima para baixo: rio Grande até Porto Colômbia, ramal do Pardo, junção, resto do Grande
+  const linhas = [...principal.slice(0, kJ).map(r => ({r, ramo:0})), ...pardo.map(r => ({r, ramo:1})), ...principal.slice(kJ).map(r => ({r, ramo:0}))];
+  const W = 340, passo = 50, topo = 70, xR = 30, xP = 74, folga = 24, iP0 = kJ, iP1 = kJ + pardo.length - 1;
+  const y = i => topo + i*passo + (i >= iP0 ? folga : 0), H = y(linhas.length-1) + 62, yJ = y(iP1) + passo/2;
+  const svg = svgEl("svg",{class:"vert", viewBox:`0 0 ${W} ${H}`, role:"img", "aria-label":"Diagrama esquemático da cascata do rio Grande e do rio Pardo, da cabeceira (em cima) à foz (embaixo)"});
+  const t = (x, yy, txt, at={}) => { const e = svgEl("text",{x, y:yy, "font-family":"Arial Narrow, Arial", "font-size":12.5, fill:"#44506A", ...at}); e.textContent = txt; svg.append(e); return e; };
+  t(0, 16, `Dados de ${dBR(lista[0].dia || D.data)} · base diária`, {fill:"#6E788C"});
+  t(xR, topo-34, "rio Grande", {"text-anchor":"middle", fill:"#283377", "font-size":13, "font-style":"italic"});
+  svg.append(svgEl("path",{d:`M${xR} ${topo-22} V${H-26}`, stroke:"#C3CFDD", "stroke-width":7, "stroke-linecap":"round", fill:"none"}));
+  svg.append(svgEl("path",{d:`M${xP} ${y(iP0)-22} V${yJ-14} Q${xP} ${yJ} ${xP-14} ${yJ} H${xR}`, stroke:"#C3CFDD", "stroke-width":5, "stroke-linecap":"round", fill:"none"}));
+  t(xP+12, y(iP0)-26, "rio Pardo", {fill:"#283377", "font-size":13, "font-style":"italic"});
+  t(xR, H-6, "rio Paraná", {"text-anchor":"middle", fill:"#6E788C", "font-style":"italic"});
+  // setas do escoamento no rio Grande, entre usinas consecutivas do eixo principal
+  const yPrinc = linhas.map((l, i) => l.ramo ? null : y(i)).filter(v => v!=null);
+  for (let k = 0; k < yPrinc.length-1; k++){
+    const ym = (yPrinc[k] + yPrinc[k+1]) / 2;
+    if (yPrinc[k+1] - yPrinc[k] > passo + folga) continue;          // trecho em que o Pardo corre ao lado: sem seta
+    svg.append(svgEl("path",{d:`M${xR-4} ${ym-3} L${xR} ${ym+4} L${xR+4} ${ym-3}`, stroke:"#283377", "stroke-width":1.4, fill:"none", opacity:.55}));
+  }
+  linhas.forEach(({r, ramo}, i) => {
+    const x = ramo ? xP : xR, yy = y(i);
+    const g = svgEl("g",{class:"no-diag", transform:`translate(${x} ${yy})`}); g.dataset.usina = r.nome;
+    if (r.tipo==="fio") g.append(svgEl("circle",{r:10, fill:"#4A7FB0", stroke:"#fff", "stroke-width":2}));
+    else g.append(svgEl("path",{d:"M0 -14 L-13 10 L13 10 Z", fill:"#283377", stroke:"#fff", "stroke-width":2, "stroke-linejoin":"round"})); // ponta para montante (cima)
+    svg.append(g);
+    const xt = (ramo ? xP : Math.max(xR, xP)) + 24;
+    t(xt, yy-2, caso(r.nome), {fill:"#283377", "font-weight":700, "font-size":13.5});
+    t(xt, yy+14, (r.tipo!=="fio" ? `VU ${fmt(r.vu,0)}% · ` : "") + `defluente ${fint(r.defl)} m³/s`, {fill:"#44506A", "font-family":"Arial", "font-size":11.5});
+    g.addEventListener("pointerenter", () => destacaUsina(r.nome));
+    g.addEventListener("pointerleave", () => destacaUsina(null));
+    g.addEventListener("click", () => abrirFicha(r));
+  });
+  host.append(svg);
+}
+// girar o celular ou redimensionar a janela: refaz o diagrama se a orientação tiver de mudar
+window.addEventListener("resize", () => {
+  const h = $("#diag-grande");
+  if (!h || !h._lista) return;
+  const vert = !!$("svg.vert", h), deve = h.clientWidth < DIAG_MIN;
+  if (vert !== deve){ h.innerHTML = ""; diagramaGrande(h, h._lista); }
+});
 
 /* ============================================================ ficha do reservatório (Furnas) */
 const VARS = {afl:{r:"Afluente", u:"m³/s", cor:"#283377", dec:0}, defl:{r:"Defluente", u:"m³/s", cor:"#D9822B", dec:0}, turb:{r:"Turbinada", u:"m³/s", cor:"#2E9E6B", dec:0},
